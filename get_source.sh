@@ -10,9 +10,6 @@ usage() {
 }
 
 
-#hgtag=
-#rflag=false
-
 for i in "$@"
 do
 	case $1 in
@@ -38,8 +35,6 @@ done
 
 
 hgtag="jdk-9+95"
-rflag="true"
-
 j9_repos="vm j9jcl"
 
 git=`which git`
@@ -66,8 +61,8 @@ hg=`which hg`
 openjdk_src_dir="jdk9"
 hgoptions=
 
-if [ "$rflag" == "true" ]; then
-	build=${hgtag:(-2)}
+if [ -n  "$hgtag" ]; then
+    build=${hgtag:-2}
 	openjdk_src_dir+="_b${build}"
 	hgoptions="-u ${hgtag}"
 fi
