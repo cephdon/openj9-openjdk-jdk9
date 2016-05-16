@@ -51,7 +51,7 @@ git_url=`expr substr $repo_url 1 $b`
 echo "Get OpenJ9 sources"
 for i in ${j9_repos} ; do
 	if [ -d ${i} ] ; then
-		#rm -f -r ${i}
+		rm -f -r ${i}
 	fi
 
 	# clone repo
@@ -61,7 +61,7 @@ for i in ${j9_repos} ; do
 done
 
 # clone Oracle OpenJDJ sources
-echo "Get OpenJDK sources"
+echo "Get OpenJDK 9 sources"
 hg=`which hg`
 openjdk_src_dir="jdk9"
 hgoptions=
@@ -76,7 +76,8 @@ echo "executing: ${hg} clone ${hgoptions} http://hg.openjdk.java.net/jdk9/jdk9  
 ${hg} clone ${hgoptions} http://hg.openjdk.java.net/jdk9/jdk9  $openjdk_src_dir || exit $? 
 
 chmod -R 755 ${openjdk_src_dir}/common/bin
-cd ${openjdk_src_dir} && get_source.sh
+cd ${openjdk_src_dir}
+sh ./get_source.sh
 
 echo "Update all existing repos with sources from tag: ${hgtag}"
 sh ./common/bin/hgforest.sh update -r ${hgtag}
