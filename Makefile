@@ -69,7 +69,7 @@ openj9:
 	mv $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/vm $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs
 	cp $(IMAGES_OUTPUTDIR)/sdk/lib/classlib.properties  $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs
 	mkdir -p $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/j9vm
-	cp $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/vm/redirector/libjvm.so $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/j9vm
+	cp $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/redirector/libjvm.so $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/j9vm
 	mkdir $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/jclSC190
 	cp $(OPENJ9JCL_SRC_DIR)/vm.jar $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/jclSC190/vm-b95.jar
 	cp $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/J9TraceFormat.dat $(IMAGES_OUTPUTDIR)/sdk/lib
