@@ -62,9 +62,7 @@ openjdk_src_dir="jdk9"
 hgoptions=
 
 if [ -n  "$hgtag" ]; then
-    build=${hgtag:-2}
-	openjdk_src_dir+="_b${build}"
-	hgoptions="-u ${hgtag}"
+    hgoptions="-u ${hgtag}"
 fi
 
 echo "executing: ${hg} clone ${hgoptions} http://hg.openjdk.java.net/jdk9/jdk9  $openjdk_src_dir"
