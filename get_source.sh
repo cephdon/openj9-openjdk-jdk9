@@ -9,14 +9,19 @@ usage() {
     exit 1
 }
 
+hgtag="jdk-9+95"
 
 for i in "$@"
 do
 	case $1 in
    		-h | --help )
-    		$usage
-    		exit
-    		;;
+    	$usage
+    	exit
+    	;;
+		
+		-r=* | --revision=* )
+		hgtag="${i#*=}"
+		;;
 		
 		'--' ) # no more options
 		usage
@@ -32,9 +37,6 @@ do
     	esac
 done
 
-
-
-hgtag="jdk-9+95"
 j9_repos="vm j9jcl"
 
 git=`which git`
