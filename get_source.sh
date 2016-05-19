@@ -38,7 +38,8 @@ hgtag="jdk-9+95"
 j9_repos="vm j9jcl"
 
 git=`which git`
-repo_url=`git config --local --get remote.origin.url`
+git_config_file=`find . -name config`
+repo_url=`git config -f $git_config_file --get remote.origin.url`
 b=`expr index $repo_url /`
 git_url=`expr substr $repo_url 1 $b`
 
