@@ -77,7 +77,7 @@ openj9:
 	cp $(OPENJ9JCL_SRC_DIR)/jcl-4-raw.jar $(IMAGES_OUTPUTDIR)/sdk/lib
 
 
-build-openj9: -compile-openj9 openj9
+build-openj9: -compile-openj9 openj9 -modify-jvm-cfg
 
 .PHONY: clean 
 clean: clean-openj9 clean-openjdk
