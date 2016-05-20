@@ -28,6 +28,15 @@ else
 	$(error Missing OpenJDK SPEC file! Run configure first!)
 endif
 
+JDK_BUILD_FILE := $(shell find . -name jdk_build.mk)
+ifdef JDK_BUILD_FILE
+	include $(JDK_BUILD_FILE)
+endif
+
+ifndef JDK_BUILD
+	JDK_BUILD:=95
+endif
+$(info Using OpenJDK build: $(JDK_BUILD))
 
 all: build-openjdk build-openj9
 .PHONY: all
@@ -71,7 +80,7 @@ openj9:
 	mkdir -p $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/j9vm
 	cp $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/redirector/libjvm.so $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/j9vm
 	mkdir $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/jclSC190
-	cp $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/J9_JCL/jclSC19B95/vm.jar $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/jclSC190/vm-b95.jar
+	cp $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/J9_JCL/jclSC19B$(JDK_BUILD)/vm.jar $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/jclSC190/vm-b$(JDK_BUILD).jar
 	cp $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/J9TraceFormat.dat $(IMAGES_OUTPUTDIR)/sdk/lib
 	cp $(IMAGES_OUTPUTDIR)/sdk/lib/amd64/compressedrefs/OMRTraceFormat.dat $(IMAGES_OUTPUTDIR)/sdk/lib
 	cp $(OPENJ9JCL_SRC_DIR)/jcl-4-raw.jar $(IMAGES_OUTPUTDIR)/sdk/lib
