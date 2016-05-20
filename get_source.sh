@@ -66,6 +66,10 @@ hgoptions=
 
 if [ -n  "$hgtag" ]; then
     hgoptions="-u ${hgtag}"
+    l=`expr length  $hgtag`
+	len=`expr $l - 6`
+	build=`expr substr $hgtag 7 $len`
+	echo "JDK_BUILD=$build" > jdk_build.mk
 fi
 
 echo "executing: ${hg} clone ${hgoptions} http://hg.openjdk.java.net/jdk9/jdk9  $openjdk_src_dir"
