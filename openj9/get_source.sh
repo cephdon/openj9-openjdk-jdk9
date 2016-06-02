@@ -48,6 +48,50 @@ version_field() {
   fi
 }
 
+usage() {
+	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9]"
+	echo "where:"
+	echo "	-h|--help 			print this help, then exit"
+	echo "	-r|--revision=<tag> is one of: jdk-9+95, jdk-9+110, jdk-9+111, jdk-9+113 "
+	echo "						[Note: fetch the given revision, otherwise get the latest sources"
+	echo "	-j9|--with-j9 		get the OpenJ9 latest sources "
+	echo " "
+	exit 1
+}
+
+j9flag="false"
+hgtag="jdk-9+113"
+
+for i in "$@"
+do
+	case $i in
+		-h | --help )
+		usage
+		;;
+
+		-j9 | --with-j9 )
+		j9flag="true"
+		;;
+
+		-r=* | --revision=* )
+		hgtag="${i#*=}"
+		;;
+
+		'--' ) # no more options
+		usage
+		;;
+
+		-*)  # bad option
+		usage
+		;;
+
+		*)  # bad option
+		usage
+		;;
+	esac
+done
+
+
 # Version check
 
 # required
@@ -94,7 +138,54 @@ fi
 
 
 # Get clones of all absent nested repositories (harmless if already exist)
-sh ./common/bin/hgforest.sh clone "$@" || exit $?
+sh ./common/bin/hgforest.sh clone || exit $?
 
-# Update all existing repositories to the latest sources
-sh ./common/bin/hgforest.sh pull -u
+echo "Detected j9 flag: $j9flagl revision: $hgtag"
+
+if [ ${j9flag} = "true" ] ; then
+	hgoptions=""
+
+	if [ -n  "$hgtag" ]; then
+		hgoptions="-u ${hgtag}"
+		hgtags="jdk-9+95 jdk-9+110 jdk-9+111 jdk-9+113"
+		good_tag="false"
+
+		for tag in ${hgtags} ; do
+			if [ ${hgtag} = ${tag} ] ; then
+				good_tag="true"
+				break
+			fi
+		done
+
+		if [ ${good_tag} = "false" ] ; then
+			error "Invalid revision number: $hgtag. Expected values are: $hgtags"
+		fi
+	fi
+
+	echo "Update all existing repos with sources from tag: ${hgtag}"
+	sh ./common/bin/hgforest.sh update -r ${hgtag}
+
+	#Get clones of all the Open J9 repositories
+	git=`which git`
+	git_url="git002@gitlab-polyglot.hursley.ibm.com:joe_dekoning-ca/"
+	j9_repos="vm j9jcl"
+	openj9_dir="j9"
+
+	if [ -d ${openj9_dir} ] ; then
+		error "OpenJ9 resources already loaded."
+	fi
+
+	mkdir -p ${openj9_dir}
+	cd ${openj9_dir}
+
+	echo "Get OpenJ9 sources"
+	for i in ${j9_repos} ; do
+		# clone repo
+		echo "Serving ${i} repository" 
+		# echo "executing: ${git} clone $git_url${i}.git"
+		${git} clone $git_url${i}.git || exit $?
+	done
+else
+	# Update all existing repositories to the latest sources
+	sh ./common/bin/hgforest.sh pull -u
+fi
