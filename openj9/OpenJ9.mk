@@ -19,7 +19,7 @@ HGTAG_FILE := $(shell find $(ROOT_DIR) -name .hgtags)
 #$(info HGTAG_FILE = $(HGTAG_FILE))
 
 TAG := $(lastword $(shell tail -n 1 $(HGTAG_FILE)))
-$(info OpenJDk TAG = $(TAG))
+#$(info OpenJDk TAG = $(TAG))
 
 ifdef TAG
 	LEN := $(shell echo $(TAG) | wc -m)
@@ -67,7 +67,7 @@ ifndef OPENJ9JCL_SRC_DIR
 endif
 
 NUMCPU := $(shell grep -c ^processor /proc/cpuinfo)
-$(info NUMCPU = $(NUMCPU))
+#$(info NUMCPU = $(NUMCPU))
 
 override MAKEFLAGS := -j $(NUMCPU)
 
@@ -75,7 +75,7 @@ OPENJ9_IMAGE_DIR := sdk
 
 ALL_TARGETS :=
 
-default: clean-j9-dist compile-j9 openj9
+default: openj9
 
 compile-j9:
 	@echo "----------------Compiling OpenJ9 in $(OUTPUT_ROOT)/vm ------------------"
@@ -84,8 +84,8 @@ compile-j9:
 		$(MAKE) $(MAKEFLAGS) all )
 	@echo "--------------------- Finished compiling OpenJ9 ------------------------"
 
-openj9:
-	@echo "---------- Building OpenJ9 image in $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR) -----------"
+openj9: compile-j9
+	#@echo "---------- Building OpenJ9 image in $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR) -----------"
 	cp -R $(IMAGES_OUTPUTDIR)/jdk $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)
 	# build pre-compiled bootmodules and copy it to jdk/lib
 	( cd $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/$(EXTRA_PATH) && \
