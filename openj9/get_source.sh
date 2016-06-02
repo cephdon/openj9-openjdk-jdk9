@@ -169,23 +169,23 @@ if [ ${j9flag} = "true" ] ; then
 	git=`which git`
 	git_url="git002@gitlab-polyglot.hursley.ibm.com:joe_dekoning-ca/"
 	j9_repos="vm j9jcl"
-	openj9_dir="j9"
-
-	if [ -d ${openj9_dir} ] ; then
-		error "OpenJ9 resources already loaded."
-	fi
-
-	mkdir -p ${openj9_dir}
-	cd ${openj9_dir}
 
 	echo "Get OpenJ9 sources"
 	for i in ${j9_repos} ; do
-		# clone repo
-		echo "Serving ${i} repository" 
-		# echo "executing: ${git} clone $git_url${i}.git"
-		${git} clone $git_url${i}.git || exit $?
+		if [ -d ${i} ] ; then
+			echo "${i} sources already loaded"
+		else
+			# clone repo
+			echo "Serving ${i} repository" 
+			# echo "executing: ${git} clone $git_url${i}.git"
+			${git} clone $git_url${i}.git || exit $?
+		fi
 	done
 else
 	# Update all existing repositories to the latest sources
 	sh ./common/bin/hgforest.sh pull -u
 fi
+
+# copy OpenJ9 resources
+cp ./openj9/Main.gmk ./make/
+cp ./openj9/OpenJ9.mk ./make/
