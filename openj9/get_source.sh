@@ -196,11 +196,17 @@ if [ ${j9flag} = "true" ] ; then
 			${git} clone $git_url${i}.git || exit $?
 		fi
 	done
+
+	# copy OpenJ9 resources
+        cp ./openj9/Main.gmk ./make/
+        cp ./openj9/OpenJ9.mk ./make/
+        cp ./openj9/generated-configure.sh ./common/autoconf
+        cp ./openj9/spec.gmk.in ./common/autoconf
+
+
 else
 	# Update all existing repositories to the latest sources
 	sh ./common/bin/hgforest.sh pull -u
 fi
 
-# copy OpenJ9 resources
-cp ./openj9/Main.gmk ./make/
-cp ./openj9/OpenJ9.mk ./make/
+
