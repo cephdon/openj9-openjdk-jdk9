@@ -92,6 +92,21 @@ do
 done
 
 
+has_sources="false"
+all_repos="corba jaxp jaxws langtools jdk hotspot nashorn vm j9jcl"
+for i in ${all_repos} ; do
+        if [ -d ${i} ] ; then
+                echo "${i} sources already loaded"
+                has_sources="true"
+        fi
+done
+
+if [ ${has_sources} = "true" ] ; then
+        exit
+fi
+
+
+
 # Version check
 
 # required
