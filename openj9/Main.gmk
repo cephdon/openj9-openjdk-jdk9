@@ -675,11 +675,9 @@ test-image: prepare-test-image test-image-hotspot-jtreg-native \
 ################################################################################
 # OpenJ9 target
 
-HAS_J9 := $(shell find $(SRC_ROOT) -name OpenJ9.mk)
-#$(info HAS_J9 = $(HAS_J9))
-BUILD_OPENJ9 :=
-ifneq ($(HAS_J9), )
-	BUILD_OPENJ9 = ($(CD) $(SRC_ROOT)/make && $(MAKE) -f OpenJ9.mk)
+BUILD_OPENJ9_IMAGE :=
+ifeq ($(BUILD_OPENJ9), true)
+	BUILD_OPENJ9_IMAGE = ($(CD) $(SRC_ROOT)/make && $(MAKE) -f OpenJ9.mk)
 endif
 
 ################################################################################
@@ -702,7 +700,7 @@ images: product-images
 docs: docs-image
 all: all-images
 	@echo Finished building OpenJDK
-	$(BUILD_OPENJ9)
+	$(BUILD_OPENJ9_IMAGE)
 
 ALL_TARGETS += default jdk images docs all
 
