@@ -31,6 +31,18 @@ diff --git a/common/autoconf/flags.m4 b/common/autoconf/flags.m4
  
      # On some platforms (mac) the linker warns about non existing -L dirs.
      # Add server first if available. Linking aginst client does not always produce the same results.
+diff --git a/common/autoconf/source-dirs.m4 b/common/autoconf/source-dirs.m4
+--- a/common/autoconf/source-dirs.m4
++++ b/common/autoconf/source-dirs.m4
+@@ -74,7 +74,7 @@
+     cd "$with_import_hotspot"
+     HOTSPOT_DIST="`pwd`"
+     cd "$CURDIR"
+-    if ! (test -d $HOTSPOT_DIST/lib && test -d $HOTSPOT_DIST/jre/lib); then
++    if ! (test -d $HOTSPOT_DIST/lib); then
+       AC_MSG_ERROR([You have to import hotspot from a full jdk image or hotspot build dist dir!])
+     fi
+     AC_MSG_CHECKING([if hotspot should be imported])
 diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
 --- a/common/autoconf/spec.gmk.in
 +++ b/common/autoconf/spec.gmk.in
@@ -40,8 +52,8 @@ diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
  
 -JLINK = @FIXPATH@ $(BUILD_JDK)/bin/jlink $(JAVA_TOOL_FLAGS_SMALL)
 -JMOD = @FIXPATH@ $(BUILD_JDK)/bin/jmod $(JAVA_TOOL_FLAGS_SMALL)
-+JLINK = @FIXPATH@ $(BUILD_JDK)/bin/jlink $(JAVA_TOOL_FLAGS_SMALL) -J-Xbootclasspath/a:$(BUILDTOOLS_OUTPUTDIR)/../jdk/modules/java.base@PATH_SEP@$(BUILDTOOLS_OUTPUTDIR)/../../../j9jcl/jcl-4-raw.jar
-+JMOD = @FIXPATH@ $(BUILD_JDK)/bin/jmod $(JAVA_TOOL_FLAGS_SMALL) -J-Xbootclasspath/a:$(BUILDTOOLS_OUTPUTDIR)/../jdk/modules/java.base@PATH_SEP@$(BUILDTOOLS_OUTPUTDIR)/../../../j9jcl/jcl-4-raw.jar
++JLINK = @FIXPATH@ $(BOOT_JDK)/bin/jlink $(JAVA_TOOL_FLAGS_SMALL)
++JMOD = @FIXPATH@ $(BOOT_JDK)/bin/jmod $(JAVA_TOOL_FLAGS_SMALL)
  
  # Base flags for RC
  # Guarding this against resetting value. Legacy make files include spec multiple

@@ -89,7 +89,7 @@ openj9: compile-j9
 	cp -R $(IMAGES_OUTPUTDIR)/jdk $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)
 	# build pre-compiled bootmodules and copy it to jdk/lib
 	( cd $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/$(EXTRA_PATH) && \
-		$(IMAGES_OUTPUTDIR)/../jdk/bin/jimage -J-Xbootclasspath/a:$(OUTPUT_ROOT)/jdk/modules/java.base:$(OPENJ9JCL_SRC_DIR)/jcl-4-raw.jar extract $(BOOT_MOD) --dir $(BOOT_MOD_DIR) )
+		$(BOOT_JDK)/bin/jimage extract $(BOOT_MOD) --dir $(BOOT_MOD_DIR) )
 	( cd $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/$(EXTRA_PATH)$(BOOT_MOD_DIR)/java.base && \
 		zip -q -r rt.jar . )
 	mv $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/$(EXTRA_PATH)$(BOOT_MOD_DIR)/java.base/rt.jar $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib
