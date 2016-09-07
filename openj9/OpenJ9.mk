@@ -89,7 +89,7 @@ openj9: compile-j9
 	cp -R $(IMAGES_OUTPUTDIR)/jdk $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)
 	# build pre-compiled bootmodules and copy it to jdk/lib
 	( cd $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/$(EXTRA_PATH) && \
-		$(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/bin/jimage extract $(BOOT_MOD) --dir $(BOOT_MOD_DIR) )
+		$(BOOT_JDK)/bin/jimage extract $(BOOT_MOD) --dir $(BOOT_MOD_DIR) )
 	( cd $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/$(EXTRA_PATH)$(BOOT_MOD_DIR)/java.base && \
 		zip -q -r rt.jar . )
 	mv $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/$(EXTRA_PATH)$(BOOT_MOD_DIR)/java.base/rt.jar $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib
@@ -98,11 +98,11 @@ openj9: compile-j9
 	@$(SED) -i -e 's/version=1.7/version=1.9/g' $(OUTPUT_ROOT)/vm/classlib.properties
 	cp $(OUTPUT_ROOT)/vm/classlib.properties  $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib
 	# replace j9 libs
-	cp -R $(OUTPUT_ROOT)/vm $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs
+	cp -R $(OUTPUT_ROOT)/vm/* $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/.
 	cp $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/classlib.properties $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs
 	mkdir -p $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/j9vm
 	cp $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/redirector/libjvm.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/j9vm
-	mkdir $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/jclSC190
+	mkdir -p $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/jclSC190
 	cp $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/J9_JCL/jclSC19B$(JDK_BUILD)/vm.jar $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/jclSC190/vm-b$(JDK_BUILD).jar
 	cp $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/J9TraceFormat.dat $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib
 	cp $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/OMRTraceFormat.dat $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib
@@ -113,6 +113,8 @@ openj9: compile-j9
 	@echo '-classic IGNORE' >> $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/jvm.cfg
 	@echo '-native IGNORE' >> $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/jvm.cfg
 	@echo '-green IGNORE' >> $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/jvm.cfg
+	#( cd $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/$(EXTRA_PATH) && \
+	#	$(BOOT_JDK)/bin/jimage extract $(BOOT_MOD) --dir $(BOOT_MOD_DIR) )
 	@echo "---------- Finished building OpenJ9 image in $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR) ------------"
 
 .PHONY: clean-j9

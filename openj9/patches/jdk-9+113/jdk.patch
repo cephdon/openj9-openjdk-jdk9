@@ -1,0 +1,189 @@
+diff --git a/make/Import.gmk b/make/Import.gmk
+--- a/make/Import.gmk
++++ b/make/Import.gmk
+@@ -55,21 +55,49 @@
+     $(addprefix $(LIBRARY_PREFIX), jvm.* $(JSIG_IMPORT) jvm_db.* jvm_dtrace.*) \
+     Xusage.txt \
+     #
++IMPORT_COMPFILES := \
++   $(addprefix $(LIBRARY_PREFIX), .*) \
++
++FILES := $(shell $(FIND) $(HOTSPOT_LIB_DIR) -type f  \
++        -a \( -name DUMMY $(addprefix -o$(SPACE)-name$(SPACE), $(HOTSPOT_BASE_IMPORT_FILES)) \) )
++
++FILES := $(filter-out $(HOTSPOT_LIB_DIR)/server/$(LIBRARY_PREFIX)jvm.%, $(FILES))
++
++COMPFILES := $(shell $(FIND) $(HOTSPOT_LIB_DIR)/compressedrefs -type f  )
+ 
+ $(eval $(call SetupCopyFiles,COPY_HOTSPOT_BASE, \
+     SRC := $(HOTSPOT_LIB_DIR), \
+     DEST := $(BASE_INSTALL_LIBRARIES_HERE), \
+-    FILES := $(shell $(FIND) $(HOTSPOT_LIB_DIR) -type f  \
+-        -a \( -name DUMMY $(addprefix -o$(SPACE)-name$(SPACE), $(HOTSPOT_BASE_IMPORT_FILES)) \) )))
++    FILES := $(FILES)))
++
++$(eval $(call SetupCopyFiles,COPY_COMPREFS_HOTSPOTBASE, \
++    SRC := $(HOTSPOT_LIB_DIR)/compressedrefs, \
++    DEST := $(BASE_INSTALL_LIBRARIES_HERE)/compressedrefs, \
++    FILES := $(COMPFILES)))
++
++$(eval $(call SetupCopyFiles,COPY_CLASSLIB, \
++    SRC := $(TOPDIR)/openj9/, \
++    DEST:= $(BASE_INSTALL_LIBRARIES_HERE)/../, \
++    FILES := classlib.properties))
+ 
+ ifeq ($(OPENJDK_TARGET_OS), windows)
+   $(eval $(call SetupCopyFiles,COPY_HOTSPOT_BASE_JVMLIB, \
+-      SRC := $(HOTSPOT_DIST)/lib, \
++      SRC := $(TOPDIR)/../jvm-bin/lib, \
+       DEST := $(BASE_INSTALL_LIBRARIES_HERE), \
+-      FILES := $(wildcard $(HOTSPOT_DIST)/lib/*.lib)))
++      FILES := $(wildcard $(TOPDIR)/../jvm-bin/lib/*.lib)))
++  $(eval $(call SetupCopyFiles,COPY_JVM_BASE_JVM, \
++      SRC := $(TOPDIR)/../jvm-bin, \
++      DEST := $(BASE_INSTALL_LIBRARIES_HERE), \
++      FILES := $(wildcard $(TOPDIR)/../jvm-bin/jvm.*)))
++else
++  $(eval $(call SetupCopyFiles,COPY_HOTSPOT_BASE_JVMLIB, \
++      SRC := $(TOPDIR)/../jvm-bin, \
++      DEST := $(BASE_INSTALL_LIBRARIES_HERE)/server, \
++      FLATTEN := true, \
++      FILES := $(wildcard $(TOPDIR)/../jvm-bin/$(LIBRARY_PREFIX)jvm.*) $(wildcard $(TOPDIR)/../jvm-bin/lib/$(LIBRARY_PREFIX)jvm.*)))
+ endif
+ 
+-BASE_TARGETS := $(COPY_HOTSPOT_BASE) $(COPY_HOTSPOT_BASE_JVMLIB)
++BASE_TARGETS := $(COPY_HOTSPOT_BASE) $(COPY_COMPREFS_HOTSPOTBASE) $(COPY_CLASSLIB) $(COPY_HOTSPOT_BASE_JVMLIB) $(COPY_JVM_BASE_JVM)
+ 
+ ################################################################################
+ 
+@@ -78,8 +106,8 @@
+     JSIG_DEBUGINFO := $(strip $(wildcard $(HOTSPOT_DIST)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig$(SHARED_LIBRARY_SUFFIX).dSYM) \
+         $(wildcard $(HOTSPOT_DIST)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.diz) )
+   else
+-    JSIG_DEBUGINFO := $(strip $(wildcard $(HOTSPOT_DIST)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.debuginfo) \
+-        $(wildcard $(HOTSPOT_DIST)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.diz) )
++    JSIG_DEBUGINFO := $(strip $(wildcard $(HOTSPOT_DIST)/jre/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.debuginfo) \
++        $(wildcard $(HOTSPOT_DIST)/jre/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.diz) )
+   endif
+ 
+   ifneq ($(OPENJDK_TARGET_OS), windows)
+diff --git a/make/ModuleTools.gmk b/make/ModuleTools.gmk
+--- a/make/ModuleTools.gmk
++++ b/make/ModuleTools.gmk
+@@ -39,9 +39,9 @@
+     ADD_JAVAC_FLAGS := -XaddExports:jdk.jdeps/com.sun.tools.classfile=ALL-UNNAMED ))
+ 
+ 
+-TOOL_GENGRAPHS := $(BUILD_JAVA) -esa -ea -cp $(TOOLS_CLASSES_DIR) \
++TOOL_GENGRAPHS := $(BOOT_JAVA) -esa -ea -cp $(TOOLS_CLASSES_DIR) \
+     build.tools.jigsaw.GenGraphs
+ 
+-TOOL_MODULESUMMARY := $(BUILD_JAVA) -esa -ea -cp $(TOOLS_CLASSES_DIR) \
++TOOL_MODULESUMMARY := $(BOOT_JAVA) -esa -ea -cp $(TOOLS_CLASSES_DIR) \
+     -XaddExports:jdk.jdeps/com.sun.tools.classfile=ALL-UNNAMED \
+     build.tools.jigsaw.ModuleSummary
+diff --git a/make/gendata/GendataBlacklistedCerts.gmk b/make/gendata/GendataBlacklistedCerts.gmk
+--- a/make/gendata/GendataBlacklistedCerts.gmk
++++ b/make/gendata/GendataBlacklistedCerts.gmk
+@@ -35,4 +35,4 @@
+ 	$(MKDIR) -p $(@D)
+ 	($(CAT) $(GENDATA_BLACKLISTED_CERTS_SRC) | $(TOOL_BLACKLISTED_CERTS) > $@) || exit 1
+ 
+-TARGETS += $(GENDATA_BLACKLISTED_CERTS)
++#TARGETS += $(GENDATA_BLACKLISTED_CERTS)
+diff --git a/src/java.base/share/classes/module-info.java b/src/java.base/share/classes/module-info.java
+--- a/src/java.base/share/classes/module-info.java
++++ b/src/java.base/share/classes/module-info.java
+@@ -138,8 +138,7 @@
+         java.logging;
+     exports jdk.internal.org.objectweb.asm to
+         jdk.jlink,
+-        jdk.scripting.nashorn,
+-        jdk.vm.ci;
++        jdk.scripting.nashorn;
+     exports jdk.internal.org.objectweb.asm.tree to
+         jdk.jlink;
+     exports jdk.internal.org.objectweb.asm.util to
+@@ -172,8 +171,7 @@
+         java.sql,
+         java.xml,
+         jdk.charsets,
+-        jdk.scripting.nashorn,
+-        jdk.vm.ci;
++        jdk.scripting.nashorn;
+     exports jdk.internal.perf to
+         java.desktop,
+         java.management,
+diff --git a/src/java.base/unix/conf/amd64/jvm.cfg b/src/java.base/unix/conf/amd64/jvm.cfg
+--- a/src/java.base/unix/conf/amd64/jvm.cfg
++++ b/src/java.base/unix/conf/amd64/jvm.cfg
+@@ -31,5 +31,8 @@
+ # "-XXaltjvm=<jvm_dir>" option, but that too is unsupported
+ # and may not be available in a future release.
+ #
+--server KNOWN
+--client IGNORE
++-j9vm KNOWN
++-hotspot IGNORE
++-classic IGNORE
++-native IGNORE
++-green IGNORE
+diff --git a/src/jdk.jcmd/share/classes/module-info.java b/src/jdk.jcmd/share/classes/module-info.java
+--- a/src/jdk.jcmd/share/classes/module-info.java
++++ b/src/jdk.jcmd/share/classes/module-info.java
+@@ -27,7 +27,6 @@
+     requires jdk.attach;
+     requires jdk.jvmstat;
+ 
+-    exports jdk.internal.vm.agent.spi to jdk.hotspot.agent;
+ 
+     uses jdk.internal.vm.agent.spi.ToolProvider;
+ }
+diff --git a/src/jdk.jdi/share/classes/module-info.java b/src/jdk.jdi/share/classes/module-info.java
+--- a/src/jdk.jdi/share/classes/module-info.java
++++ b/src/jdk.jdi/share/classes/module-info.java
+@@ -31,7 +31,6 @@
+     exports com.sun.jdi.connect.spi;
+     exports com.sun.jdi.event;
+     exports com.sun.jdi.request;
+-    exports com.sun.tools.jdi to jdk.hotspot.agent;
+ 
+     uses com.sun.jdi.connect.Connector;
+     uses com.sun.jdi.connect.spi.TransportService;
+diff --git a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
+--- a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
++++ b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
+@@ -76,7 +76,7 @@
+ 
+     @Override
+     public Set<STATE> getState() {
+-        return EnumSet.of(STATE.AUTO_ENABLED, STATE.FUNCTIONAL);
++        return EnumSet.of(STATE.DISABLED, STATE.FUNCTIONAL);
+     }
+ 
+     @Override
+diff --git a/src/jdk.jlink/share/classes/jdk/tools/jlink/resources/plugins.properties b/src/jdk.jlink/share/classes/jdk/tools/jlink/resources/plugins.properties
+--- a/src/jdk.jlink/share/classes/jdk/tools/jlink/resources/plugins.properties
++++ b/src/jdk.jlink/share/classes/jdk/tools/jlink/resources/plugins.properties
+@@ -44,11 +44,6 @@
+ exclude-resources.description=\
+ Specify resources to exclude. e.g.: *.jcov, */META-INF/*
+ 
+-generate-jli-classes.argument=<bmh[:bmh-species=LL,L3,...]>
+-
+-generate-jli-classes.description=\
+-Concrete java.lang.invoke classes to generate
+-
+ installed-modules.description=Fast loading of module descriptors (always enabled)
+ 
+ onoff.argument=<on|off>
+diff --git a/src/jdk.jlink/share/classes/module-info.java b/src/jdk.jlink/share/classes/module-info.java
+--- a/src/jdk.jlink/share/classes/module-info.java
++++ b/src/jdk.jlink/share/classes/module-info.java
+@@ -45,6 +45,5 @@
+     provides jdk.tools.jlink.plugin.TransformerPlugin with jdk.tools.jlink.internal.plugins.OptimizationPlugin;
+     provides jdk.tools.jlink.plugin.TransformerPlugin with jdk.tools.jlink.internal.plugins.ExcludeVMPlugin;
+     provides jdk.tools.jlink.plugin.TransformerPlugin with jdk.tools.jlink.internal.plugins.IncludeLocalesPlugin;
+-    provides jdk.tools.jlink.plugin.TransformerPlugin with jdk.tools.jlink.internal.plugins.GenerateJLIClassesPlugin;
+     provides jdk.tools.jlink.plugin.PostProcessorPlugin with jdk.tools.jlink.internal.plugins.ReleaseInfoPlugin;
+ }

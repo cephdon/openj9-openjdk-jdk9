@@ -1,0 +1,148 @@
+diff --git a/common/autoconf/flags.m4 b/common/autoconf/flags.m4
+--- a/common/autoconf/flags.m4
++++ b/common/autoconf/flags.m4
+@@ -67,6 +67,19 @@
+   CXXFLAGS="$EXTRA_CXXFLAGS"
+   LDFLAGS="$EXTRA_LDFLAGS"
+   CPPFLAGS=""
++
++  # Check whether --with-j9 was given.
++  BUILD_OPENJ9=false
++  AC_ARG_WITH(j9, [AS_HELP_STRING([--with-j9],
++  [Build J9 VM sources])])
++  if test "x$with-j9" != x; then
++     if ! (test -d $SRC_ROOT/vm && test -d $SRC_ROOT/j9jcl); then
++       AC_MSG_ERROR(["Cannot locate the path to OpenJ9 sources!"])
++     fi
++     BUILD_OPENJ9=true
++  fi
++
++  AC_SUBST(BUILD_OPENJ9)
+ ])
+ 
+ # Setup the sysroot flags and add them to global CFLAGS and LDFLAGS so
+@@ -912,7 +925,8 @@
+     JDKLIB_LIBS=""
+   else
+     LDFLAGS_JDKLIB="${LDFLAGS_JDKLIB} \
+-        -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base\$(OPENJDK_TARGET_CPU_LIBDIR)"
++        -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base\$(OPENJDK_TARGET_CPU_LIBDIR) \
++        -L${OUTPUT_ROOT}/support/modules_libs/java.base${OPENJDK_TARGET_CPU_LIBDIR}/default"
+ 
+     # On some platforms (mac) the linker warns about non existing -L dirs.
+     # Add server first if available. Linking aginst client does not always produce the same results.
+diff --git a/common/autoconf/source-dirs.m4 b/common/autoconf/source-dirs.m4
+--- a/common/autoconf/source-dirs.m4
++++ b/common/autoconf/source-dirs.m4
+@@ -74,7 +74,7 @@
+     cd "$with_import_hotspot"
+     HOTSPOT_DIST="`pwd`"
+     cd "$CURDIR"
+-    if ! (test -d $HOTSPOT_DIST/lib && test -d $HOTSPOT_DIST/jre/lib); then
++    if ! (test -d $HOTSPOT_DIST/lib); then
+       AC_MSG_ERROR([You have to import hotspot from a full jdk image or hotspot build dist dir!])
+     fi
+     AC_MSG_CHECKING([if hotspot should be imported])
+diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
+--- a/common/autoconf/spec.gmk.in
++++ b/common/autoconf/spec.gmk.in
+@@ -551,8 +551,8 @@
+ # JLink/Jmod are run using the BUILD_JDK, which is normally the jdk output dir.
+ JLINK_KEEP_PACKAGED_MODULES:=@JLINK_KEEP_PACKAGED_MODULES@
+ 
+-JLINK = @FIXPATH@ $(BUILD_JDK)/bin/jlink $(JAVA_TOOL_FLAGS_SMALL)
+-JMOD = @FIXPATH@ $(BUILD_JDK)/bin/jmod $(JAVA_TOOL_FLAGS_SMALL)
++JLINK = @FIXPATH@ $(BOOT_JDK)/bin/jlink $(JAVA_TOOL_FLAGS_SMALL)
++JMOD = @FIXPATH@ $(BOOT_JDK)/bin/jmod $(JAVA_TOOL_FLAGS_SMALL)
+ 
+ # Base flags for RC
+ # Guarding this against resetting value. Legacy make files include spec multiple
+@@ -561,6 +561,10 @@
+   RC_FLAGS:=@RC_FLAGS@
+ endif
+ 
++
++# OpenJ9 build flag
++BUILD_OPENJ9:=@BUILD_OPENJ9@
++
+ # Tools adhering to a minimal and common standard of posix compliance.
+ AWK:=@AWK@
+ BASENAME:=@BASENAME@
+diff --git a/make/CreateJmods.gmk b/make/CreateJmods.gmk
+--- a/make/CreateJmods.gmk
++++ b/make/CreateJmods.gmk
+@@ -81,7 +81,6 @@
+             --os-arch $(OPENJDK_TARGET_CPU_LEGACY) \
+             --os-version $(REQUIRED_OS_VERSION) \
+ 	    --modulepath $(IMAGES_OUTPUTDIR)/jmods\
+-            --hash-dependencies '.*' \
+             --exclude '**_the.*' \
+ 	    $(JMOD_FLAGS) $(SUPPORT_OUTPUTDIR)/jmods/$(notdir $@)
+ 	$(MV) $(SUPPORT_OUTPUTDIR)/jmods/$(notdir $@) $@
+diff --git a/make/Main.gmk b/make/Main.gmk
+--- a/make/Main.gmk
++++ b/make/Main.gmk
+@@ -384,8 +384,8 @@
+ build-test-lib:
+ 	+($(CD) $(TOPDIR)/make/test && $(MAKE) $(MAKE_ARGS) -f BuildTestLib.gmk)
+ 
+-ALL_TARGETS += prepare-test-image build-test-hotspot-jtreg-native \
+-    test-image-hotspot-jtreg-native build-test-jdk-jtreg-native \
++ALL_TARGETS += prepare-test-image \
++    build-test-jdk-jtreg-native \
+     test-image-jdk-jtreg-native build-test-lib
+ 
+ ################################################################################
+@@ -669,9 +669,19 @@
+ docs-image: docs-javadoc docs-jvmtidoc
+ 
+ # This target builds the test image
+-test-image: prepare-test-image test-image-hotspot-jtreg-native \
++test-image: prepare-test-image \
+     test-image-jdk-jtreg-native
+ 
++################################################################################
++# OpenJ9 target
++
++BUILD_OPENJ9_IMAGE :=
++ifeq ($(BUILD_OPENJ9), true)
++	BUILD_OPENJ9_IMAGE = ($(CD) $(SRC_ROOT)/make && $(MAKE) -f OpenJ9.mk)
++endif
++
++################################################################################
++
+ # all-images is the top-most target, it builds all our deliverables ("images").
+ all-images: product-images test-image docs-image
+ 
+@@ -689,6 +699,8 @@
+ images: product-images
+ docs: docs-image
+ all: all-images
++	@echo Finished building OpenJDK
++	$(BUILD_OPENJ9_IMAGE)
+ 
+ ALL_TARGETS += default jdk images docs all
+ 
+diff --git a/make/common/Modules.gmk b/make/common/Modules.gmk
+--- a/make/common/Modules.gmk
++++ b/make/common/Modules.gmk
+@@ -66,7 +66,6 @@
+     jdk.sctp \
+     jdk.security.auth \
+     jdk.security.jgss \
+-    jdk.vm.ci \
+     #
+ 
+ # to be deprivileged
+diff --git a/make/common/SetupJavaCompilers.gmk b/make/common/SetupJavaCompilers.gmk
+--- a/make/common/SetupJavaCompilers.gmk
++++ b/make/common/SetupJavaCompilers.gmk
+@@ -32,7 +32,7 @@
+ 
+ # If warnings needs to be non-fatal for testing purposes use a command like:
+ # make JAVAC_WARNINGS="-Xlint:all -Xmaxwarns 10000"
+-JAVAC_WARNINGS := -Xlint:all -Werror
++JAVAC_WARNINGS := -Xlint:all
+ 
+ # The BOOT_JAVAC setup uses the boot jdk compiler to compile the tools
+ # and the interim javac, to be run by the boot jdk.

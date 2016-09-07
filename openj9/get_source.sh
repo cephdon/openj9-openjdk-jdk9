@@ -93,7 +93,11 @@ done
 
 
 has_sources="false"
-all_repos="corba jaxp jaxws langtools jdk hotspot nashorn vm j9jcl"
+if [ ${j9flag} = "true" ] ; then
+all_repos="corba jaxp jaxws langtools jdk nashorn vm j9jcl"
+else
+all_repos="corba jaxp jaxws langtools jdk hotspot nashorn"
+fi
 for i in ${all_repos} ; do
         if [ -d ${i} ] ; then
                 echo "${i} sources already loaded"
@@ -153,7 +157,13 @@ fi
 
 
 # Get clones of all absent nested repositories (harmless if already exist)
+if [ ${j9flag} = "true" ] ; then
+patch -p1 < ./openj9/patches/$hgtag/hgforest.patch
+#cp ./openj9/hgforest.sh ./common/bin/hgforest.sh
+sh ./common/bin/hgforest.sh --with-j9 clone || exit $?
+else
 sh ./common/bin/hgforest.sh clone || exit $?
+fi
 
 echo "Detected j9 flag: $j9flagl revision: $hgtag"
 
@@ -178,7 +188,7 @@ if [ ${j9flag} = "true" ] ; then
 	fi
 
 	echo "Update all existing repos with sources from tag: ${hgtag}"
-	sh ./common/bin/hgforest.sh update -r ${hgtag}
+	sh ./common/bin/hgforest.sh --with-j9 update -r ${hgtag}
 
 	#Get clones of all the Open J9 repositories
 	git=`which git`
@@ -198,12 +208,13 @@ if [ ${j9flag} = "true" ] ; then
 	done
 
 	# copy OpenJ9 resources
-        cp ./openj9/Main.gmk ./make/
         cp ./openj9/OpenJ9.mk ./make/
-        cp ./openj9/generated-configure.sh ./common/autoconf
-        cp ./openj9/spec.gmk.in ./common/autoconf
-
-
+        patch -p1 < ./openj9/patches/${hgtag}/root.patch
+        cd langtools
+        patch -p1 < ./../openj9/patches/${hgtag}/langtools.patch
+        cd ../jdk
+        patch -p1 < ./../openj9/patches/${hgtag}/jdk.patch
+        cd ..
 else
 	# Update all existing repositories to the latest sources
 	sh ./common/bin/hgforest.sh pull -u

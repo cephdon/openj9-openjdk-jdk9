@@ -1,0 +1,12 @@
+diff --git a/src/jdk.compiler/share/classes/com/sun/tools/javac/code/Types.java b/src/jdk.compiler/share/classes/com/sun/tools/javac/code/Types.java
+--- a/src/jdk.compiler/share/classes/com/sun/tools/javac/code/Types.java
++++ b/src/jdk.compiler/share/classes/com/sun/tools/javac/code/Types.java
+@@ -1071,7 +1071,7 @@
+        List<Type> argtypes = msym.type.getParameterTypes();
+        return (msym.flags_field & NATIVE) != 0 &&
+                msym.owner == syms.methodHandleType.tsym &&
+-               argtypes.tail.tail == null &&
++               argtypes.length() == 1 && argtypes.tail.tail == null &&
+                argtypes.head.hasTag(TypeTag.ARRAY) &&
+                msym.type.getReturnType().tsym == syms.objectType.tsym &&
+                ((ArrayType)argtypes.head).elemtype.tsym == syms.objectType.tsym;
