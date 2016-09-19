@@ -192,16 +192,16 @@ if [ ${j9flag} = "true" ] ; then
 
 	#Get clones of all the Open J9 repositories
 	git=`which git`
-	git_url="git002@gitlab-polyglot.hursley.ibm.com:joe_dekoning-ca/"
-	j9_repos="vm j9jcl"
+	git_url="git002@gitlab-polyglot.hursley.ibm.com:"
+	j9_repos="j9/j9vm jit/tr.open omr/omr j9/binaries j9/tooling j9/rtctest joe_dekoning-ca/j9jcl"
 
-	echo "Get OpenJ9 sources"
+	echo "Retrieving OpenJ9 repositories: ${j9_repos}"
 	for i in ${j9_repos} ; do
 		if [ -d ${i} ] ; then
 			echo "${i} sources already loaded"
 		else
 			# clone repo
-			echo "Serving ${i} repository" 
+			echo "Cloning ${git_url}${i}"
 			# echo "executing: ${git} clone $git_url${i}.git"
 			${git} clone $git_url${i}.git || exit $?
 		fi
