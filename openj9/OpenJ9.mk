@@ -285,7 +285,7 @@ compile.module.java:
 	$(foreach module, $(J9_MODULE_LIST), $(call compile-module-info) $(\n))
 
 rebuild.jmods:
-	$(eval override MODULE_LIST = $(filter-out modules_root,$(shell find /tmp/modules_root/ -maxdepth 1 -type d -exec basename '{}' \; | tr '\n' ' ')))
+	$(eval override MODULE_LIST = $(filter-out modules_root,$(shell find $(OUTPUT_ROOT)/jcl_workdir/modules_root/ -maxdepth 1 -type d -exec basename '{}' \; | tr '\n' ' ')))
 	$(foreach module, $(MODULE_LIST), $(call create.jmod) $(\n))
 
 compose-j9:
