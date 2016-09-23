@@ -231,4 +231,3 @@ else
 	# Update all existing repositories to the latest sources
 	sh ./common/bin/hgforest.sh pull -u
 fi
-
