@@ -49,18 +49,36 @@ version_field() {
 }
 
 usage() {
-	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9]"
+	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9] [... other j9 options]"
 	echo "where:"
-	echo "	-h|--help 			print this help, then exit"
-	echo "	-r|--revision=<tag> is one of: jdk-9+95, jdk-9+110, jdk-9+111, jdk-9+113 "
-	echo "						[Note: fetch the given revision, otherwise get the latest sources"
-	echo "	-j9|--with-j9 		get the OpenJ9 latest sources "
+	echo "	-h|--help 				print this help, then exit"
+	echo "	-r|--revision=<tag> 	is one of: jdk-9+95, jdk-9+110, jdk-9+111, jdk-9+113 "
+	echo "							[Note: fetch the given revision, otherwise get the latest sources"
+	echo "	-j9|--with-j9 			get the OpenJ9 latest sources "
+	echo "other j9 options (used only with -j9|--with-j9 option): "
+	echo "	-j9vm-repo				the OpenJ9/vm git fork: default: j9/j9vm "
+	echo "	-j9vm-branch			the OpenJ9/vm git branch: default: master "
+	echo "	-j9jcl-repo				the OpenJ9/j9jcl git fork: default: j9/j9jcl "
+	echo "	-j9jcl-branch			the OpenJ9/j9jcl git branch: default: master "
+	echo "	-omr-repo				the OpenJ9/omr git fork: default: omr/omr "
+	echo "	-omr-branch				the OpenJ9/omr git branch: default: java-master "
+	echo "	-binaries-repo			the OpenJ9/binaries git fork: default: j9/binaries "
+	echo "	-binaries-branch		the OpenJ9/binaries git branch: default: master "
+	echo "	-tooling-repo			the OpenJ9/tooling git fork: default: j9/tooling "
+	echo "	-tooling-branch			the OpenJ9/tooling git branch: default: master "
+	echo "	-rtctest-repo			the OpenJ9/rtctest git fork: default: j9/rtctest "
+	echo "	-rtctest-branch			the OpenJ9/rtctest git branch: default: master "
+	echo "	-test-branch			the OpenJ9/test git branch: default: master "
+	echo "	-test-repo				the OpenJ9/test git fork: default: j9/test "
+	echo "	-jit-repo				the OpenJ9/jit git fork: default: jit/tr.open "
+	echo "	-jit-branch				the OpenJ9/jit git branch: default: java-master "
 	echo " "
 	exit 1
 }
 
 j9flag="false"
 hgtag="jdk-9+113"
+
 
 for i in "$@"
 do
@@ -71,6 +89,10 @@ do
 
 		-j9 | --with-j9 )
 		j9flag="true"
+		;;
+
+		-j9vm-repo=* | -j9vm-branch=* | -j9jcl-repo=* | -j9jcl-branch=* | -omr-repo=* | -omr-branch=* | -binaries-repo=* | -binaries-branch=* | -tooling-repo=* | -tooling-branch=* | -rtctest-repo=* | -rtctest-branch=* |-jit-repo=* |-jit-branch=* )
+		j9_repos_options="${j9_repos_options} ${i}"
 		;;
 
 		-r=* | --revision=* )
@@ -91,25 +113,30 @@ do
 	esac
 done
 
+# expected OpenJDK tags
+hgtags="jdk-9+95 jdk-9+110 jdk-9+111 jdk-9+113"
 
+# check if sources loaded
 has_sources="false"
 if [ ${j9flag} = "true" ] ; then
-all_repos="corba jaxp jaxws langtools jdk nashorn vm j9jcl"
+	all_repos="corba jaxp jaxws langtools jdk nashorn binaries j9vm j9jcl omr tooling rtctest j9test"
 else
-all_repos="corba jaxp jaxws langtools jdk hotspot nashorn"
+	all_repos="corba jaxp jaxws langtools jdk hotspot nashorn"
 fi
+
 for i in ${all_repos} ; do
-        if [ -d ${i} ] ; then
-                echo "${i} sources already loaded"
-                has_sources="true"
-        fi
+	if [ -d ${i} ] ; then
+		echo "${i} sources already loaded"
+		has_sources="true"
+	else
+		has_source="false"
+		break
+	fi
 done
 
 if [ ${has_sources} = "true" ] ; then
-        exit
+	exit
 fi
-
-
 
 # Version check
 
@@ -158,21 +185,15 @@ fi
 
 # Get clones of all absent nested repositories (harmless if already exist)
 if [ ${j9flag} = "true" ] ; then
-patch -p1 < ./openj9/patches/$hgtag/hgforest.patch
-#cp ./openj9/hgforest.sh ./common/bin/hgforest.sh
-sh ./common/bin/hgforest.sh --with-j9 clone || exit $?
-else
-sh ./common/bin/hgforest.sh clone || exit $?
-fi
+	patch -p1 < ./openj9/patches/$hgtag/hgforest.patch
+	cp ./openj9/hgforest.sh ./common/bin/hgforest.sh
 
-echo "Detected j9 flag: $j9flagl revision: $hgtag"
+	# clone absent OpenJDK repositories (except hotspot - harmless if already exist)
+	sh ./common/bin/hgforest.sh --with-j9 clone || exit $?
 
-if [ ${j9flag} = "true" ] ; then
 	hgoptions=""
-
 	if [ -n  "$hgtag" ]; then
 		hgoptions="-u ${hgtag}"
-		hgtags="jdk-9+95 jdk-9+110 jdk-9+111 jdk-9+113"
 		good_tag="false"
 
 		for tag in ${hgtags} ; do
@@ -187,37 +208,26 @@ if [ ${j9flag} = "true" ] ; then
 		fi
 	fi
 
+	# roll back OpenJDK components to the given tag
 	echo "Update all existing repos with sources from tag: ${hgtag}"
 	sh ./common/bin/hgforest.sh --with-j9 update -r ${hgtag}
 
-	#Get clones of all the Open J9 repositories
-	git=`which git`
-	git_url="git002@gitlab-polyglot.hursley.ibm.com:"
-	j9_repos="j9/j9vm jit/tr.open omr/omr j9/binaries j9/tooling j9/rtctest joe_dekoning-ca/j9jcl"
-
-	echo "Retrieving OpenJ9 repositories: ${j9_repos}"
-	for i in ${j9_repos} ; do
-		if [ -d ${i} ] ; then
-			echo "${i} sources already loaded"
-		else
-			# clone repo
-			echo "Cloning ${git_url}${i}"
-			# echo "executing: ${git} clone $git_url${i}.git"
-			${git} clone $git_url${i}.git || exit $?
-		fi
-	done
+	# Get clones of OpenJ9 absent repositories
+	bash ./openj9/get_j9_source.sh ${j9_repos_options}
 
 	# copy OpenJ9 resources
-        cp ./openj9/OpenJ9.mk ./make/
-        patch -p1 < ./openj9/patches/${hgtag}/root.patch
-        cd langtools
-        patch -p1 < ./../openj9/patches/${hgtag}/langtools.patch
-        cd ../jdk
-        patch -p1 < ./../openj9/patches/${hgtag}/jdk.patch
-        cd ..
+	cp ./openj9/OpenJ9.mk ./make/
+	patch -p1 < ./openj9/patches/${hgtag}/root.patch
+	cd langtools
+	patch -p1 < ./../openj9/patches/${hgtag}/langtools.patch
+	cd ../jdk
+	patch -p1 < ./../openj9/patches/${hgtag}/jdk.patch
+	cd ..
+
 else
+	# Get clones of all OpenJDK absent nested repositories (harmless if already exist)
+	sh ./common/bin/hgforest.sh clone || exit $?
+
 	# Update all existing repositories to the latest sources
 	sh ./common/bin/hgforest.sh pull -u
 fi
-
-
