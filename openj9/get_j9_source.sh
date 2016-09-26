@@ -33,8 +33,8 @@ fi
 
 declare -A j9repos
 declare -A branches
-declare -A default_j9repos=( [j9vm]=j9/j9vm [j9jcl]=joe_dekoning-ca/j9jcl [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [rtctest]=j9/rtctest [test]=j9/test [jit]=jit/tr.open )
-declare -A default_branches=( [j9vm]=master [j9jcl]=master [omr]=java-master [binaries]=master [tooling]=master [rtctest]=master [test]=master [jit]=java-master )
+declare -A default_j9repos=( [j9vm]=j9/j9vm [j9jcl]=joe_dekoning-ca/j9jcl [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [rtctest]=j9/rtctest [test]=j9/test [tr.open]=jit/tr.open )
+declare -A default_branches=( [j9vm]=master [j9jcl]=master [omr]=java-master [binaries]=master [tooling]=master [rtctest]=master [test]=master [tr.open]=java-master )
 
 
 ostype=`uname -s`
@@ -167,7 +167,7 @@ for i in "${!default_j9repos[@]}" ; do
 		repo="${j9repos[$i]}.git"
 		fi
 
-		git_clone_command="${git} clone -b ${branch} ${git_url}${repo} ${output}"
+		git_clone_command="${git} clone --recursive -b ${branch} ${git_url}${repo} ${output}"
 	echo "Servicing $i"
 	${git_clone_command} || exit $?
 done
