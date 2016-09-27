@@ -159,12 +159,6 @@ ALL_TARGETS :=
 default: openj9
 
 stage-j9:
-	git -C $(OPENJ9VM_SRC_DIR) checkout master
-	git -C $(OPENJ9VM_SRC_DIR)/../tr.open checkout java-master
-	git -C $(OPENJ9VM_SRC_DIR)/../omr checkout java-master
-	git -C $(OPENJ9VM_SRC_DIR)/../binaries checkout master
-	git -C $(OPENJ9VM_SRC_DIR)/../tooling checkout master
-	git -C $(OPENJ9VM_SRC_DIR)/../rtctest checkout master
 	@echo "---------------- Staging OpenJ9 components in $(OUTPUT_ROOT)/vm ------------------"
 	rm -rf $(OUTPUT_ROOT)/vm
 	mkdir $(OUTPUT_ROOT)/vm
@@ -199,7 +193,9 @@ stage-j9:
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/junit3.8.2.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/junit.jclbuildtools.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/JUnit.jar
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/xercesImpl-2.0.2.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
+	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/dom4j-1.6.1.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/xmlParserAPIs-2.0.2.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
+	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/gnujaxp.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
 	mkdir -p $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190
 	mkdir $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B113
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190B113.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B113/rt-compressed.jar
@@ -219,26 +215,24 @@ run-preprocessors-j9:
 	cd $(OUTPUT_ROOT)/vm
 	# checkSpec copya2e configure uma j9vm_sha rpcgen tracing nls hooktool constantpool ddr
 	sed -i -e 's/1.5/1.8/g' $(OUTPUT_ROOT)/vm/VM_Source-Tools/buildj9tools.mk
-	sed -i -e 's/HOOKTOOL=/HOOKTOOL=\$(BOOT_JDK8)\/bin\//g' $(OUTPUT_ROOT)/vm/buildtools.mk
 	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 JAVA_HOME=$(BOOT_JDK) buildtools)
 	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 checkSpec)
 	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 copya2e)
 	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 configure)
-	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 uma)
-	#(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 j9vm_sha)
+	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 BUILD_ID=123456 UMA_OPTIONS_EXTRA="-buildDate 20160927" uma)
 	$(eval J9VM_SHA=$(shell git -C $(OPENJ9VM_SRC_DIR) rev-parse --short HEAD))
 	@sed -i -e 's/developer.compile/$(J9VM_SHA)/g' $(OUTPUT_ROOT)/vm/include/j9version.h
 	@echo J9VM version string set to : $(J9VM_SHA)
 	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 tracing)
 	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 nls)
-	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 hooktool)
+	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 JAVA_HOME=$(BOOT_JDK8) hooktool)
 	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 constantpool)
 	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 ddr)
 	sed -i -e 's/gcc-4.6/gcc/g' $(OUTPUT_ROOT)/vm/makelib/mkconstants.mk
 	sed -i -e 's/O3 -fno-strict-aliasing/O0 -Wno-format -Wno-unused-result -fno-strict-aliasing -fno-stack-protector/g' $(OUTPUT_ROOT)/vm/makelib/targets.mk
 	# generate RAS binaries - PROBLEM: need to fix these to work with new sdk release
 	sed -i -e 's/1.5\"/1.8\"/g' $(OUTPUT_ROOT)/vm/RAS_Binaries/build.xml
-	ant -lib $(OUTPUT_ROOT)/vm/buildtools/om.jar -f $(OUTPUT_ROOT)/vm/RAS_Binaries/build.xml -Dwith-boot-jdk=$(BOOT_JDK)
+	ant -lib $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/om.jar -f $(OUTPUT_ROOT)/vm/RAS_Binaries/build.xml -Dwith-boot-jdk=$(BOOT_JDK)
 	#generate j8 cuda jar
 	ant -verbose -f "$(OUTPUT_ROOT)/vm/J9 JCL/cuda4j.xml" -Djvm.version=28 -Dspec.level=1.8 -Dsource=. -Djavabin=$(BOOT_JDK)/bin/ all
 	#generate j9 cuda jar
