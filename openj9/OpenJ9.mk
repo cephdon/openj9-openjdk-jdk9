@@ -41,7 +41,7 @@ endif
 JDK_BUILD = $(shell echo $$(( $(ID) + 1 )))
 #$(info JDK_BUILD = $(JDK_BUILD))
 
-PRE_MOD_CFG := $(shell if test "$(JDK_BUILD)" -lt "113"; then echo 1; else echo 0; fi)
+PRE_MOD_CFG := $(shell if test "$(JDK_BUILD)" -lt "136"; then echo 1; else echo 0; fi)
 #$(info PRE_MOD_CFG = $(PRE_MOD_CFG))
 
 ifeq ($(PRE_MOD_CFG), 1) # pre-modules version
@@ -197,8 +197,8 @@ stage-j9:
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/xmlParserAPIs-2.0.2.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/gnujaxp.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
 	mkdir -p $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190
-	mkdir $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B113
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190B113.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B113/rt-compressed.jar
+	mkdir $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B136
+	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190B136.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B136/rt-compressed.jar
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190/rt-compressed.jar
 	cp -r $(OPENJ9VM_SRC_DIR)/../rtctest/com.ibm.jvmti.tests $(OUTPUT_ROOT)/vm/
 	# actions required to hammer tr.open repo into the 'source.zip' shape
@@ -240,7 +240,7 @@ run-preprocessors-j9:
 	#generate j9 modularity cuda jar
 	ant -verbose -f "$(OUTPUT_ROOT)/vm/J9 JCL/cuda4j.xml" -Djvm.version=28 -Dspec.level=1.9 -Dsource=. -Djavabin=$(BOOT_JDK)/bin/ all
 	ant -verbose -f "$(OUTPUT_ROOT)/vm/JCL Ant Build/jcl_build.xml" -Djob.buildId= -Dspec.level=1.9 -Djpp.config=SIDECAR19-DAA -Dcompile.bcp=sun190 -Djpp.dirname=jclSC190-DAA -Dsource=$(OUTPUT_ROOT)/vm -Djavabin=$(BOOT_JDK)/bin/ -Dbuild.root=$(OUTPUT_ROOT)/vm all
-	ant -verbose -f "$(OUTPUT_ROOT)/vm/JCL Ant Build/jcl_build.xml" -Djob.buildId= -Dspec.level=1.9 -Djpp.config=SIDECAR19_MODULAR-SE -Dcompile.bcp=sun190B113 -Djpp.dirname=jclSC19Modular -Dsource=$(OUTPUT_ROOT)/vm -Djavabin=$(BOOT_JDK)/bin/ -Dbuild.root=$(OUTPUT_ROOT)/vm all
+	ant -verbose -f "$(OUTPUT_ROOT)/vm/JCL Ant Build/jcl_build.xml" -Djob.buildId= -Dspec.level=1.9 -Djpp.config=SIDECAR19_MODULAR-SE_B136 -Dcompile.bcp=sun190B136 -Djpp.dirname=jclSC19ModularB136 -Dsource=$(OUTPUT_ROOT)/vm -Djavabin=$(BOOT_JDK)/bin/ -Dbuild.root=$(OUTPUT_ROOT)/vm all
 	@echo "---------------- Finished OpenJ9 preprocessors ------------------------"
 
 .PARALLEL compile-j9:
@@ -262,7 +262,7 @@ setup.j9jcl:
 	mkdir -p $(OUTPUT_ROOT)/jcl_workdir/modules/
 	cp -R $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR) $(OUTPUT_ROOT)/jcl_workdir/merge/sdk/
 	unzip -qo "$(OUTPUT_ROOT)/vm/J9 JCL/cuda4j_j9_modular.jar" -d $(OUTPUT_ROOT)/jcl_workdir/j9jcl/
-	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC19Modular/classes-vm.zip -d $(OUTPUT_ROOT)/jcl_workdir/j9jcl/
+	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC19ModularB136/classes-vm.zip -d $(OUTPUT_ROOT)/jcl_workdir/j9jcl/
 	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC190-DAA/classes-vm.zip -d $(OUTPUT_ROOT)/jcl_workdir/j9jcl/java.base/ "com/ibm/dataaccess/*"
 	unzip -qo $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jcl-4-raw.jar -d $(OUTPUT_ROOT)/jcl_workdir/j9jcl/java.base/
 	rm -rf $(OUTPUT_ROOT)/jcl_workdir/j9jcl/META-INF

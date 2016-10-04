@@ -52,7 +52,7 @@ usage() {
 	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9] [... other j9 options]"
 	echo "where:"
 	echo "	-h|--help 				print this help, then exit"
-	echo "	-r|--revision=<tag> 	is one of: jdk-9+95, jdk-9+110, jdk-9+111, jdk-9+113 "
+	echo "	-r|--revision=<tag> 	is one of: jdk-9+95, jdk-9+110, jdk-9+111, jdk-9+113 jdk-9+136"
 	echo "							[Note: fetch the given revision, otherwise get the latest sources"
 	echo "	-j9|--with-j9 			get the OpenJ9 latest sources "
 	echo "other j9 options (used only with -j9|--with-j9 option): "
@@ -77,7 +77,7 @@ usage() {
 }
 
 j9flag="false"
-hgtag="jdk-9+113"
+hgtag="jdk-9+136"
 
 
 for i in "$@"
@@ -114,7 +114,7 @@ do
 done
 
 # expected OpenJDK tags
-hgtags="jdk-9+95 jdk-9+110 jdk-9+111 jdk-9+113"
+hgtags="jdk-9+95 jdk-9+110 jdk-9+111 jdk-9+113 jdk-9+136"
 
 # check if sources loaded
 has_sources="false"
@@ -185,9 +185,7 @@ fi
 
 # Get clones of all absent nested repositories (harmless if already exist)
 if [ ${j9flag} = "true" ] ; then
-	patch -p1 < ./openj9/patches/$hgtag/hgforest.patch
-	cp ./openj9/hgforest.sh ./common/bin/hgforest.sh
-
+        hg pull default
 	# clone absent OpenJDK repositories (except hotspot - harmless if already exist)
 	sh ./common/bin/hgforest.sh --with-j9 clone || exit $?
 
@@ -222,7 +220,9 @@ if [ ${j9flag} = "true" ] ; then
 	patch -p1 < ./../openj9/patches/${hgtag}/langtools.patch
 	cd ../jdk
 	patch -p1 < ./../openj9/patches/${hgtag}/jdk.patch
-	cd ..
+	cd ../nashorn
+        patch -p1 < ./../openj9/patches/${hgtag}/nashorn.patch 
+        cd ..
 
 else
 	# Get clones of all OpenJDK absent nested repositories (harmless if already exist)

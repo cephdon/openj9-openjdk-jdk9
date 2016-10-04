@@ -1,0 +1,1336 @@
+diff --git a/make/GenerateClasslist.gmk b/make/GenerateClasslist.gmk
+--- a/make/GenerateClasslist.gmk
++++ b/make/GenerateClasslist.gmk
+@@ -67,7 +67,7 @@
+ 	    build.tools.classlist.HelloClasslist \
+ 	    $(LOG_DEBUG) 2>&1 > $(JLI_TRACE_FILE)
+ 
+-TARGETS += $(CLASSLIST_FILE)
++#TARGETS += $(CLASSLIST_FILE)
+ 
+ ################################################################################
+ 
+diff --git a/make/Import.gmk b/make/Import.gmk
+--- a/make/Import.gmk
++++ b/make/Import.gmk
+@@ -55,21 +55,49 @@
+     $(addprefix $(LIBRARY_PREFIX), jvm.* $(JSIG_IMPORT) jvm_db.* jvm_dtrace.*) \
+     Xusage.txt \
+     #
++IMPORT_COMPFILES := \
++   $(addprefix $(LIBRARY_PREFIX), .*) \
++
++FILES := $(shell $(FIND) $(HOTSPOT_LIB_DIR) -type f  \
++        -a \( -name DUMMY $(addprefix -o$(SPACE)-name$(SPACE), $(HOTSPOT_BASE_IMPORT_FILES)) \) )
++
++FILES := $(filter-out $(HOTSPOT_LIB_DIR)/server/$(LIBRARY_PREFIX)jvm.%, $(FILES))
++
++COMPFILES := $(shell $(FIND) $(HOTSPOT_LIB_DIR)/compressedrefs -type f  )
+ 
+ $(eval $(call SetupCopyFiles,COPY_HOTSPOT_BASE, \
+     SRC := $(HOTSPOT_LIB_DIR), \
+     DEST := $(BASE_INSTALL_LIBRARIES_HERE), \
+-    FILES := $(shell $(FIND) $(HOTSPOT_LIB_DIR) -type f  \
+-        -a \( -name DUMMY $(addprefix -o$(SPACE)-name$(SPACE), $(HOTSPOT_BASE_IMPORT_FILES)) \) )))
++    FILES := $(FILES)))
++
++$(eval $(call SetupCopyFiles,COPY_COMPREFS_HOTSPOTBASE, \
++    SRC := $(HOTSPOT_LIB_DIR)/compressedrefs, \
++    DEST := $(BASE_INSTALL_LIBRARIES_HERE)/compressedrefs, \
++    FILES := $(COMPFILES)))
++
++$(eval $(call SetupCopyFiles,COPY_CLASSLIB, \
++    SRC := $(TOPDIR)/openj9/, \
++    DEST:= $(BASE_INSTALL_LIBRARIES_HERE)/../, \
++    FILES := classlib.properties))
+ 
+ ifeq ($(OPENJDK_TARGET_OS), windows)
+   $(eval $(call SetupCopyFiles,COPY_HOTSPOT_BASE_JVMLIB, \
+-      SRC := $(HOTSPOT_DIST)/lib, \
++      SRC := $(TOPDIR)/../jvm-bin/lib, \
+       DEST := $(BASE_INSTALL_LIBRARIES_HERE), \
+-      FILES := $(wildcard $(HOTSPOT_DIST)/lib/*.lib)))
++      FILES := $(wildcard $(TOPDIR)/../jvm-bin/lib/*.lib)))
++  $(eval $(call SetupCopyFiles,COPY_JVM_BASE_JVM, \
++      SRC := $(TOPDIR)/../jvm-bin, \
++      DEST := $(BASE_INSTALL_LIBRARIES_HERE), \
++      FILES := $(wildcard $(TOPDIR)/../jvm-bin/jvm.*)))
++else
++  $(eval $(call SetupCopyFiles,COPY_HOTSPOT_BASE_JVMLIB, \
++      SRC := $(TOPDIR)/../jvm-bin, \
++      DEST := $(BASE_INSTALL_LIBRARIES_HERE)/server, \
++      FLATTEN := true, \
++      FILES := $(wildcard $(TOPDIR)/../jvm-bin/$(LIBRARY_PREFIX)jvm.*) $(wildcard $(TOPDIR)/../jvm-bin/lib/$(LIBRARY_PREFIX)jvm.*)))
+ endif
+ 
+-BASE_TARGETS := $(COPY_HOTSPOT_BASE) $(COPY_HOTSPOT_BASE_JVMLIB)
++BASE_TARGETS := $(COPY_HOTSPOT_BASE) $(COPY_COMPREFS_HOTSPOTBASE) $(COPY_CLASSLIB) $(COPY_HOTSPOT_BASE_JVMLIB) $(COPY_JVM_BASE_JVM)
+ 
+ ################################################################################
+ 
+@@ -78,8 +106,8 @@
+     JSIG_DEBUGINFO := $(strip $(wildcard $(HOTSPOT_DIST)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig$(SHARED_LIBRARY_SUFFIX).dSYM) \
+         $(wildcard $(HOTSPOT_DIST)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.diz) )
+   else
+-    JSIG_DEBUGINFO := $(strip $(wildcard $(HOTSPOT_DIST)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.debuginfo) \
+-        $(wildcard $(HOTSPOT_DIST)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.diz) )
++    JSIG_DEBUGINFO := $(strip $(wildcard $(HOTSPOT_DIST)/jre/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.debuginfo) \
++        $(wildcard $(HOTSPOT_DIST)/jre/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libjsig.diz) )
+   endif
+ 
+   ifneq ($(OPENJDK_TARGET_OS), windows)
+diff --git a/make/ModuleTools.gmk b/make/ModuleTools.gmk
+--- a/make/ModuleTools.gmk
++++ b/make/ModuleTools.gmk
+@@ -36,12 +36,12 @@
+     INCLUDES := build/tools/deps \
+                 build/tools/jigsaw, \
+     BIN := $(TOOLS_CLASSES_DIR), \
+-    ADD_JAVAC_FLAGS := --add-exports jdk.jdeps/com.sun.tools.classfile=ALL-UNNAMED ))
++    ADD_JAVAC_FLAGS := -XaddExports:jdk.jdeps/com.sun.tools.classfile=ALL-UNNAMED ))
+ 
+ 
+-TOOL_GENGRAPHS := $(BUILD_JAVA) -esa -ea -cp $(TOOLS_CLASSES_DIR) \
++TOOL_GENGRAPHS := $(BOOT_JAVA) -esa -ea -cp $(TOOLS_CLASSES_DIR) \
+     build.tools.jigsaw.GenGraphs
+ 
+-TOOL_MODULESUMMARY := $(BUILD_JAVA) -esa -ea -cp $(TOOLS_CLASSES_DIR) \
+-    --add-exports jdk.jdeps/com.sun.tools.classfile=ALL-UNNAMED \
++TOOL_MODULESUMMARY := $(BOOT_JAVA) -esa -ea -cp $(TOOLS_CLASSES_DIR) \
++    -XaddExportsi:jdk.jdeps/com.sun.tools.classfile=ALL-UNNAMED \
+     build.tools.jigsaw.ModuleSummary
+diff --git a/make/Tools.gmk b/make/Tools.gmk
+--- a/make/Tools.gmk
++++ b/make/Tools.gmk
+@@ -38,7 +38,7 @@
+ ################################################################################
+ 
+ ifeq ($(BOOT_JDK_MODULAR), true)
+-  COMPILEFONTCONFIG_ADD_EXPORTS := --add-exports java.desktop/sun.awt=ALL-UNNAMED
++  COMPILEFONTCONFIG_ADD_EXPORTS := -XaddExports:java.desktop/sun.awt=ALL-UNNAMED
+ endif
+ 
+ TOOL_COMPILEFONTCONFIG = $(JAVA_SMALL) -cp $(BUILDTOOLS_OUTPUTDIR)/jdk_tools_classes \
+@@ -94,7 +94,7 @@
+ # Nimbus is used somewhere in the swing build.
+ 
+ ifeq ($(BOOT_JDK_MODULAR), true)
+-  COMPILENIMBUS_ADD_MODS := --add-modules java.xml.bind
++  COMPILENIMBUS_ADD_MODS := -addmods java.xml.bind
+ endif
+ 
+ TOOL_GENERATENIMBUS = $(JAVA_SMALL) -cp $(BUILDTOOLS_OUTPUTDIR)/jdk_tools_classes \
+diff --git a/make/gendata/GendataBlacklistedCerts.gmk b/make/gendata/GendataBlacklistedCerts.gmk
+--- a/make/gendata/GendataBlacklistedCerts.gmk
++++ b/make/gendata/GendataBlacklistedCerts.gmk
+@@ -33,4 +33,4 @@
+ 	$(call MakeDir, $(@D))
+ 	($(CAT) $(GENDATA_BLACKLISTED_CERTS_SRC) | $(TOOL_BLACKLISTED_CERTS) > $@) || exit 1
+ 
+-TARGETS += $(GENDATA_BLACKLISTED_CERTS)
++#TARGETS += $(GENDATA_BLACKLISTED_CERTS)
+diff --git a/make/gendata/GendataBreakIterator.gmk b/make/gendata/GendataBreakIterator.gmk
+--- a/make/gendata/GendataBreakIterator.gmk
++++ b/make/gendata/GendataBreakIterator.gmk
+@@ -63,14 +63,13 @@
+ 
+ ifeq ($(BOOT_JDK_MODULAR), true)
+   BREAK_ITERATOR_BOOTCLASSPATH := \
+-      --patch-module java.base=$(BREAK_ITERATOR_CLASSES)/java.base \
+-      --patch-module jdk.localedata=$(BREAK_ITERATOR_CLASSES)/jdk.localedata \
+-      --add-exports java.base/sun.text=ALL-UNNAMED \
+-      --add-exports java.base/sun.text.resources=ALL-UNNAMED \
+-      --add-exports jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
++      -Xpatch:java.base=$(BREAK_ITERATOR_CLASSES)/java.base,jdk.localedata=$(BREAK_ITERATOR_CLASSES)/jdk.localedata \
++      -XaddExports:java.base/sun.text=ALL-UNNAMED,java.base/sun.text.resources=ALL-UNNAMED,jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
++      #--add-exports java.base/sun.text.resources=ALL-UNNAMED \
++      #--add-exports jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
+       #
+ else
+-  BREAK_ITERATOR_BOOTCLASSPATH := -Xbootclasspath/p:$(call PathList, \
++  BREAK_ITERATOR_BOOTCLASSPATH += -Xbootclasspath/p:$(call PathList, \
+       $(BREAK_ITERATOR_CLASSES)/java.base \
+       $(BREAK_ITERATOR_CLASSES)/jdk.localedata)
+ endif
+diff --git a/make/launcher/Launcher-jdk.javadoc.gmk b/make/launcher/Launcher-jdk.javadoc.gmk
+--- a/make/launcher/Launcher-jdk.javadoc.gmk
++++ b/make/launcher/Launcher-jdk.javadoc.gmk
+@@ -27,7 +27,7 @@
+ 
+ $(eval $(call SetupBuildLauncher, javadoc, \
+     MAIN_CLASS := jdk.javadoc.internal.tool.Main, \
+-    JAVA_ARGS := --add-modules ALL-DEFAULT, \
++    JAVA_ARGS := -addmods ALL-DEFAULT, \
+     CFLAGS := -DEXPAND_CLASSPATH_WILDCARDS \
+         -DNEVER_ACT_AS_SERVER_CLASS_MACHINE, \
+ ))
+diff --git a/src/java.base/share/classes/java/lang/invoke/MethodHandleNatives.java b/src/java.base/share/classes/java/lang/invoke/MethodHandleNatives.java
+--- a/src/java.base/share/classes/java/lang/invoke/MethodHandleNatives.java
++++ b/src/java.base/share/classes/java/lang/invoke/MethodHandleNatives.java
+@@ -451,7 +451,7 @@
+         VarHandle.AccessDescriptor ad = new VarHandle.AccessDescriptor(mtype, ak.at.ordinal(), ak.ordinal());
+         appendixResult[0] = ad;
+ 
+-        if (MethodHandleStatics.VAR_HANDLE_GUARDS) {
++        /*if (MethodHandleStatics.VAR_HANDLE_GUARDS) {
+             MemberName linker = new MemberName(
+                     VarHandleGuards.class, "guard_" + getVarHandleMethodSignature(sigType),
+                     guardType, REF_invokeStatic);
+@@ -463,7 +463,7 @@
+             }
+             // Fall back to lambda form linkage if guard method is not available
+             // TODO Optionally log fallback ?
+-        }
++        }*/
+         return Invokers.varHandleInvokeLinkerMethod(name, mtype);
+     }
+     static String getVarHandleMethodSignature(MethodType mt) {
+diff --git a/src/java.base/share/classes/java/lang/invoke/VarHandle.java b/src/java.base/share/classes/java/lang/invoke/VarHandle.java
+--- a/src/java.base/share/classes/java/lang/invoke/VarHandle.java
++++ b/src/java.base/share/classes/java/lang/invoke/VarHandle.java
+@@ -2021,7 +2021,7 @@
+ 
+         // The VarHandleGuards must be initialized to ensure correct
+         // compilation of the guard methods
+-        UNSAFE.ensureClassInitialized(VarHandleGuards.class);
++        //UNSAFE.ensureClassInitialized(VarHandleGuards.class);
+     }
+ 
+ 
+diff --git a/src/java.base/share/classes/java/lang/invoke/VarHandleGuards.java b/src/java.base/share/classes/java/lang/invoke/VarHandleGuards.java
+deleted file mode 100644
+--- a/src/java.base/share/classes/java/lang/invoke/VarHandleGuards.java
++++ /dev/null
+@@ -1,1038 +0,0 @@
+-/*
+- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- *
+- * This code is free software; you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License version 2 only, as
+- * published by the Free Software Foundation.  Oracle designates this
+- * particular file as subject to the "Classpath" exception as provided
+- * by Oracle in the LICENSE file that accompanied this code.
+- *
+- * This code is distributed in the hope that it will be useful, but WITHOUT
+- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+- * version 2 for more details (a copy is included in the LICENSE file that
+- * accompanied this code).
+- *
+- * You should have received a copy of the GNU General Public License version
+- * 2 along with this work; if not, write to the Free Software Foundation,
+- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+- *
+- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+- * or visit www.oracle.com if you need additional information or have any
+- * questions.
+- */
+-package java.lang.invoke;
+-
+-import jdk.internal.vm.annotation.ForceInline;
+-
+-// This class is auto-generated by java.lang.invoke.VarHandles$GuardMethodGenerator. Do not edit.
+-final class VarHandleGuards {
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static Object guard_L_L(VarHandle handle, Object arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            Object r = MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-            return ad.returnType.cast(r);
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LL_V(VarHandle handle, Object arg0, Object arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static Object guard_LL_L(VarHandle handle, Object arg0, Object arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            Object r = MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-            return ad.returnType.cast(r);
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LLL_Z(VarHandle handle, Object arg0, Object arg1, Object arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static Object guard_LLL_L(VarHandle handle, Object arg0, Object arg1, Object arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            Object r = MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-            return ad.returnType.cast(r);
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard_L_I(VarHandle handle, Object arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LI_V(VarHandle handle, Object arg0, int arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard_LI_I(VarHandle handle, Object arg0, int arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LII_Z(VarHandle handle, Object arg0, int arg1, int arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard_LII_I(VarHandle handle, Object arg0, int arg1, int arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard_L_J(VarHandle handle, Object arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LJ_V(VarHandle handle, Object arg0, long arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard_LJ_J(VarHandle handle, Object arg0, long arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LJJ_Z(VarHandle handle, Object arg0, long arg1, long arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard_LJJ_J(VarHandle handle, Object arg0, long arg1, long arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static float guard_L_F(VarHandle handle, Object arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (float) MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (float) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LF_V(VarHandle handle, Object arg0, float arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static float guard_LF_F(VarHandle handle, Object arg0, float arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (float) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (float) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LFF_Z(VarHandle handle, Object arg0, float arg1, float arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static float guard_LFF_F(VarHandle handle, Object arg0, float arg1, float arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (float) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (float) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static double guard_L_D(VarHandle handle, Object arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (double) MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (double) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LD_V(VarHandle handle, Object arg0, double arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static double guard_LD_D(VarHandle handle, Object arg0, double arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (double) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (double) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LDD_Z(VarHandle handle, Object arg0, double arg1, double arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static double guard_LDD_D(VarHandle handle, Object arg0, double arg1, double arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (double) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (double) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static Object guard__L(VarHandle handle, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            Object r = MethodHandle.linkToStatic(handle, handle.vform.getMemberName(ad.mode));
+-            return ad.returnType.cast(r);
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_L_V(VarHandle handle, Object arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LL_Z(VarHandle handle, Object arg0, Object arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard__I(VarHandle handle, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_I_V(VarHandle handle, int arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard_I_I(VarHandle handle, int arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_II_Z(VarHandle handle, int arg0, int arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard_II_I(VarHandle handle, int arg0, int arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard__J(VarHandle handle, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_J_V(VarHandle handle, long arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard_J_J(VarHandle handle, long arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_JJ_Z(VarHandle handle, long arg0, long arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard_JJ_J(VarHandle handle, long arg0, long arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static float guard__F(VarHandle handle, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (float) MethodHandle.linkToStatic(handle, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (float) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_F_V(VarHandle handle, float arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static float guard_F_F(VarHandle handle, float arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (float) MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (float) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_FF_Z(VarHandle handle, float arg0, float arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static float guard_FF_F(VarHandle handle, float arg0, float arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (float) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (float) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static double guard__D(VarHandle handle, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (double) MethodHandle.linkToStatic(handle, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (double) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_D_V(VarHandle handle, double arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static double guard_D_D(VarHandle handle, double arg0, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (double) MethodHandle.linkToStatic(handle, arg0, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (double) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_DD_Z(VarHandle handle, double arg0, double arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static double guard_DD_D(VarHandle handle, double arg0, double arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (double) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (double) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static Object guard_LI_L(VarHandle handle, Object arg0, int arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            Object r = MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-            return ad.returnType.cast(r);
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LIL_V(VarHandle handle, Object arg0, int arg1, Object arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static Object guard_LIL_L(VarHandle handle, Object arg0, int arg1, Object arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            Object r = MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-            return ad.returnType.cast(r);
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LILL_Z(VarHandle handle, Object arg0, int arg1, Object arg2, Object arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static Object guard_LILL_L(VarHandle handle, Object arg0, int arg1, Object arg2, Object arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            Object r = MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-            return ad.returnType.cast(r);
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LII_V(VarHandle handle, Object arg0, int arg1, int arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LIII_Z(VarHandle handle, Object arg0, int arg1, int arg2, int arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard_LIII_I(VarHandle handle, Object arg0, int arg1, int arg2, int arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard_LI_J(VarHandle handle, Object arg0, int arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LIJ_V(VarHandle handle, Object arg0, int arg1, long arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard_LIJ_J(VarHandle handle, Object arg0, int arg1, long arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LIJJ_Z(VarHandle handle, Object arg0, int arg1, long arg2, long arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard_LIJJ_J(VarHandle handle, Object arg0, int arg1, long arg2, long arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static float guard_LI_F(VarHandle handle, Object arg0, int arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (float) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (float) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LIF_V(VarHandle handle, Object arg0, int arg1, float arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static float guard_LIF_F(VarHandle handle, Object arg0, int arg1, float arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (float) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (float) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LIFF_Z(VarHandle handle, Object arg0, int arg1, float arg2, float arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static float guard_LIFF_F(VarHandle handle, Object arg0, int arg1, float arg2, float arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (float) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (float) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static double guard_LI_D(VarHandle handle, Object arg0, int arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (double) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (double) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LID_V(VarHandle handle, Object arg0, int arg1, double arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static double guard_LID_D(VarHandle handle, Object arg0, int arg1, double arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (double) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (double) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LIDD_Z(VarHandle handle, Object arg0, int arg1, double arg2, double arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static double guard_LIDD_D(VarHandle handle, Object arg0, int arg1, double arg2, double arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (double) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (double) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard_LJ_I(VarHandle handle, Object arg0, long arg1, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, arg0, arg1, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LJI_V(VarHandle handle, Object arg0, long arg1, int arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard_LJI_I(VarHandle handle, Object arg0, long arg1, int arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LJII_Z(VarHandle handle, Object arg0, long arg1, int arg2, int arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static int guard_LJII_I(VarHandle handle, Object arg0, long arg1, int arg2, int arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (int) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (int) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static void guard_LJJ_V(VarHandle handle, Object arg0, long arg1, long arg2, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else if (handle.vform.getMethodType_V(ad.type) == ad.symbolicMethodTypeErased) {
+-            MethodHandle.linkToStatic(handle, arg0, arg1, arg2, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static boolean guard_LJJJ_Z(VarHandle handle, Object arg0, long arg1, long arg2, long arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (boolean) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (boolean) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-    @ForceInline
+-    @LambdaForm.Compiled
+-    final static long guard_LJJJ_J(VarHandle handle, Object arg0, long arg1, long arg2, long arg3, VarHandle.AccessDescriptor ad) throws Throwable {
+-        if (handle.vform.methodType_table[ad.type] == ad.symbolicMethodTypeErased) {
+-            return (long) MethodHandle.linkToStatic(handle, arg0, arg1, arg2, arg3, handle.vform.getMemberName(ad.mode));
+-        }
+-        else {
+-            MethodHandle mh = handle.getMethodHandle(ad.mode);
+-            return (long) mh.asType(ad.symbolicMethodTypeInvoker).invokeBasic(handle, arg0, arg1, arg2, arg3);
+-        }
+-    }
+-
+-}
+diff --git a/src/java.base/share/classes/module-info.java b/src/java.base/share/classes/module-info.java
+--- a/src/java.base/share/classes/module-info.java
++++ b/src/java.base/share/classes/module-info.java
+@@ -129,8 +129,7 @@
+     exports jdk.internal.org.objectweb.asm to
+         jdk.jartool,
+         jdk.jlink,
+-        jdk.scripting.nashorn,
+-        jdk.vm.ci;
++        jdk.scripting.nashorn;
+     exports jdk.internal.org.objectweb.asm.tree to
+         jdk.jlink;
+     exports jdk.internal.org.objectweb.asm.util to
+@@ -168,8 +167,7 @@
+         jdk.jlink,
+         jdk.net,
+         jdk.scripting.nashorn,
+-        jdk.unsupported,
+-        jdk.vm.ci;
++        jdk.unsupported;
+     exports jdk.internal.perf to
+         java.desktop,
+         java.management,
+@@ -185,8 +183,7 @@
+         jdk.scripting.nashorn,
+         jdk.unsupported;
+     exports jdk.internal.vm.annotation to
+-        jdk.unsupported,
+-        jdk.vm.ci;
++        jdk.unsupported;
+     exports jdk.internal.util.jar to
+         jdk.jartool;
+     exports jdk.internal.vm to
+diff --git a/src/java.base/unix/conf/amd64/jvm.cfg b/src/java.base/unix/conf/amd64/jvm.cfg
+--- a/src/java.base/unix/conf/amd64/jvm.cfg
++++ b/src/java.base/unix/conf/amd64/jvm.cfg
+@@ -31,5 +31,8 @@
+ # "-XXaltjvm=<jvm_dir>" option, but that too is unsupported
+ # and may not be available in a future release.
+ #
+--server KNOWN
+--client IGNORE
++-j9vm KNOWN
++-hotspot IGNORE
++-classic IGNORE
++-native IGNORE
++-green IGNORE
+diff --git a/src/java.se.ee/share/classes/module-info.java b/src/java.se.ee/share/classes/module-info.java
+--- a/src/java.se.ee/share/classes/module-info.java
++++ b/src/java.se.ee/share/classes/module-info.java
+@@ -25,9 +25,6 @@
+ 
+ /**
+  * Defines the full API of the Java SE Platform.
+- * <P>
+- * This module requires {@code java.se} and supplements it with modules
+- * that define CORBA and Java EE APIs. These modules are upgradeable.
+  */
+ module java.se.ee {
+ 
+diff --git a/src/jdk.jdi/share/classes/module-info.java b/src/jdk.jdi/share/classes/module-info.java
+--- a/src/jdk.jdi/share/classes/module-info.java
++++ b/src/jdk.jdi/share/classes/module-info.java
+@@ -31,7 +31,6 @@
+     exports com.sun.jdi.connect.spi;
+     exports com.sun.jdi.event;
+     exports com.sun.jdi.request;
+-    exports com.sun.tools.jdi to jdk.hotspot.agent;
+ 
+     uses com.sun.jdi.connect.Connector;
+     uses com.sun.jdi.connect.spi.TransportService;
+diff --git a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
+--- a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
++++ b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
+@@ -90,7 +90,7 @@
+ 
+     @Override
+     public Set<State> getState() {
+-        return EnumSet.of(State.AUTO_ENABLED, State.FUNCTIONAL);
++        return EnumSet.of(State.DISABLED, State.FUNCTIONAL);
+     }
+ 
+     @Override
+diff --git a/src/jdk.jlink/share/classes/module-info.java b/src/jdk.jlink/share/classes/module-info.java
+--- a/src/jdk.jlink/share/classes/module-info.java
++++ b/src/jdk.jlink/share/classes/module-info.java
+@@ -41,7 +41,6 @@
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.DefaultCompressPlugin;
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ExcludeVMPlugin;
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.IncludeLocalesPlugin;
+-    provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.GenerateJLIClassesPlugin;
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ReleaseInfoPlugin;
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ClassForNamePlugin;
+  }

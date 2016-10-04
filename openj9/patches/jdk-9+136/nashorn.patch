@@ -1,0 +1,27 @@
+diff --git a/make/BuildNashorn.gmk b/make/BuildNashorn.gmk
+--- a/make/BuildNashorn.gmk
++++ b/make/BuildNashorn.gmk
+@@ -44,8 +44,8 @@
+ $(eval $(call SetupJavaCompiler,GENERATE_NEWBYTECODE_DEBUG, \
+     JVM := $(JAVA), \
+     JAVAC := $(NEW_JAVAC), \
+-    FLAGS := -g -source 9 -target 9 --upgrade-module-path "$(JDK_OUTPUTDIR)/modules/" \
+-         --system none --module-source-path "$(MODULESOURCEPATH)", \
++    FLAGS := -g -source 9 -target 9 -upgrademodulepath "$(JDK_OUTPUTDIR)/modules/" \
++         -system none -modulesourcepath "$(MODULESOURCEPATH)", \
+     SERVER_DIR := $(SJAVAC_SERVER_DIR), \
+     SERVER_JVM := $(SJAVAC_SERVER_JAVA)))
+ 
+@@ -76,9 +76,9 @@
+ ifeq ($(BOOT_JDK_MODULAR), true)
+   NASGEN_OPTIONS := \
+       -cp $(BUILDTOOLS_OUTPUTDIR)/nasgen_classes \
+-      --patch-module java.base=$(BUILDTOOLS_OUTPUTDIR)/nasgen_classes \
+-      --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED \
+-      --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED \
++      -Xpatch:java.base=$(BUILDTOOLS_OUTPUTDIR)/nasgen_classes \
++      -XaddExports:java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED,java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED \
++      #--add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED \
+       #
+ else
+   NASGEN_OPTIONS := \

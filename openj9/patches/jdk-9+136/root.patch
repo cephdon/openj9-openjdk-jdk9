@@ -1,0 +1,317 @@
+diff --git a/common/autoconf/boot-jdk.m4 b/common/autoconf/boot-jdk.m4
+--- a/common/autoconf/boot-jdk.m4
++++ b/common/autoconf/boot-jdk.m4
+@@ -526,8 +526,8 @@
+     fi
+   fi
+ 
+-  JMOD="$BUILD_JDK/bin/jmod"
+-  JLINK="$BUILD_JDK/bin/jlink"
++  JMOD="$BOOT_JDK/bin/jmod"
++  JLINK="$BOOT_JDK/bin/jlink"
+   AC_SUBST(JMOD)
+   AC_SUBST(JLINK)
+ 
+diff --git a/common/autoconf/flags.m4 b/common/autoconf/flags.m4
+--- a/common/autoconf/flags.m4
++++ b/common/autoconf/flags.m4
+@@ -71,6 +71,19 @@
+   CXXFLAGS="$EXTRA_CXXFLAGS"
+   LDFLAGS="$EXTRA_LDFLAGS"
+   CPPFLAGS=""
++
++  # Check whether --with-j9 was given.
++  BUILD_OPENJ9=false
++  AC_ARG_WITH(j9, [AS_HELP_STRING([--with-j9],
++  [Build J9 VM sources])])
++  if test "x$with-j9" != x; then
++     if ! (test -d $SRC_ROOT/j9vm && test -d $SRC_ROOT/j9jcl); then
++       AC_MSG_ERROR(["Cannot locate the path to OpenJ9 sources!"])
++     fi
++     BUILD_OPENJ9=true
++  fi
++
++  AC_SUBST(BUILD_OPENJ9)
+ ])
+ 
+ # Setup the sysroot flags and add them to global CFLAGS and LDFLAGS so
+@@ -1149,7 +1162,8 @@
+     $2JDKLIB_LIBS=""
+   else
+     $2JAVA_BASE_LDFLAGS="${$2JAVA_BASE_LDFLAGS} \
+-        -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base\$(OPENJDK_$1_CPU_LIBDIR)"
++        -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base\$(OPENJDK_$1_CPU_LIBDIR) \
++        -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base\$(OPENJDK_$1_CPU_LIBDIR)/default"
+ 
+     if test "x$1" = "xTARGET"; then
+     # On some platforms (mac) the linker warns about non existing -L dirs.
+diff --git a/common/autoconf/source-dirs.m4 b/common/autoconf/source-dirs.m4
+--- a/common/autoconf/source-dirs.m4
++++ b/common/autoconf/source-dirs.m4
+@@ -74,7 +74,7 @@
+     cd "$with_import_hotspot"
+     HOTSPOT_DIST="`pwd`"
+     cd "$CURDIR"
+-    if ! (test -d $HOTSPOT_DIST/lib && test -d $HOTSPOT_DIST/jre/lib); then
++    if ! (test -d $HOTSPOT_DIST/lib); then
+       AC_MSG_ERROR([You have to import hotspot from a full jdk image or hotspot build dist dir!])
+     fi
+     AC_MSG_CHECKING([if hotspot should be imported])
+diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
+--- a/common/autoconf/spec.gmk.in
++++ b/common/autoconf/spec.gmk.in
+@@ -611,6 +611,10 @@
+   RC_FLAGS:=@RC_FLAGS@
+ endif
+ 
++
++# OpenJ9 build flag
++BUILD_OPENJ9:=@BUILD_OPENJ9@
++
+ # Tools adhering to a minimal and common standard of posix compliance.
+ AWK:=@AWK@
+ BASENAME:=@BASENAME@
+diff --git a/make/CompileJavaModules.gmk b/make/CompileJavaModules.gmk
+--- a/make/CompileJavaModules.gmk
++++ b/make/CompileJavaModules.gmk
+@@ -502,9 +502,9 @@
+     HEADERS := $(SUPPORT_OUTPUTDIR)/headers, \
+     ADD_JAVAC_FLAGS := \
+         $($(MODULE)_ADD_JAVAC_FLAGS) \
+-        --module-source-path $(MODULESOURCEPATH) \
+-        --module-path $(MODULEPATH) \
+-        --system none, \
++        -modulesourcepath $(MODULESOURCEPATH) \
++        -modulepath $(MODULEPATH) \
++        -system none, \
+ ))
+ 
+ TARGETS += $($(MODULE)) $($(MODULE)_COPY_EXTRA)
+diff --git a/make/CreateJmods.gmk b/make/CreateJmods.gmk
+--- a/make/CreateJmods.gmk
++++ b/make/CreateJmods.gmk
+@@ -77,8 +77,8 @@
+ 
+     EXCLUDE_PATTERN := $(strip $(subst $(SPACE),|,$(strip $(ALL_UPGRADEABLE_MODULES))))
+ 
+-    JMOD_FLAGS += --module-path $(JMODS_DIR) \
+-        --hash-modules '^(?!$(EXCLUDE_PATTERN))'
++    JMOD_FLAGS += --modulepath $(JMODS_DIR) \
++        #--hash-modules '^(?!$(EXCLUDE_PATTERN))'
+   endif
+ endif
+ 
+@@ -102,7 +102,7 @@
+             --os-name $(REQUIRED_OS_NAME) \
+             --os-arch $(OPENJDK_TARGET_CPU_LEGACY) \
+             --os-version $(REQUIRED_OS_VERSION) \
+-            --module-path $(JMODS_DIR) \
++            --modulepath $(JMODS_DIR) \
+             --exclude '**{_the.*,*.diz,*.debuginfo,*.dSYM/**,*.pdb,*.map}' \
+ 	    $(JMOD_FLAGS) $(SUPPORT_OUTPUTDIR)/jmods/$(notdir $@)
+ 	$(MV) $(SUPPORT_OUTPUTDIR)/jmods/$(notdir $@) $@
+diff --git a/make/Images.gmk b/make/Images.gmk
+--- a/make/Images.gmk
++++ b/make/Images.gmk
+@@ -119,7 +119,7 @@
+ JLINK_JLI_CLASSES :=
+ ifeq ($(ENABLE_GENERATE_CLASSLIST), true)
+   JLINK_ORDER_RESOURCES += @$(SUPPORT_OUTPUTDIR)/classlist/classlist
+-  JLINK_JLI_CLASSES := --generate-jli-classes=@$(SUPPORT_OUTPUTDIR)/classlist/jli_trace.out
++#  JLINK_JLI_CLASSES := --generate-jli-classes=@$(SUPPORT_OUTPUTDIR)/classlist/jli_trace.out
+ endif
+ JLINK_ORDER_RESOURCES += \
+     /java.base/java/** \
+@@ -129,10 +129,9 @@
+     /jdk.localedata/** \
+     #
+ 
+-JLINK_TOOL := $(JLINK) --module-path $(IMAGES_OUTPUTDIR)/jmods \
++JLINK_TOOL := $(JLINK) --modulepath $(IMAGES_OUTPUTDIR)/jmods \
+     --endian $(OPENJDK_BUILD_CPU_ENDIAN) \
+     --release-info $(BASE_RELEASE_FILE) \
+-    --order-resources=$(call CommaList, $(JLINK_ORDER_RESOURCES)) \
+     $(JLINK_JLI_CLASSES) \
+     #
+ 
+@@ -145,7 +144,7 @@
+ 	$(ECHO) Creating jdk jimage
+ 	$(RM) -r $(JDK_IMAGE_DIR)
+ 	$(JLINK_TOOL) --output $(JDK_IMAGE_DIR) \
+-	    --add-modules $(JDK_MODULES_LIST) $(JLINK_EXTRA_OPTS)
++	    --addmods $(JDK_MODULES_LIST) $(JLINK_EXTRA_OPTS)
+ 	$(TOUCH) $@
+ 
+ $(JRE_IMAGE_DIR)/$(JIMAGE_TARGET_FILE): $(JMODS) \
+@@ -153,7 +152,7 @@
+ 	$(ECHO) Creating jre jimage
+ 	$(RM) -r $(JRE_IMAGE_DIR)
+ 	$(JLINK_TOOL) --output $(JRE_IMAGE_DIR) \
+-	    --add-modules $(JRE_MODULES_LIST)
++	    --addmods $(JRE_MODULES_LIST)
+ 	$(TOUCH) $@
+ 
+ JRE_COMPACT1_IMAGE_DIR := $(JRE_IMAGE_DIR)-compact1
+@@ -164,7 +163,7 @@
+     $(call DependOnVariable, JRE_COMPACT1_MODULES_LIST) $(BASE_RELEASE_FILE)
+ 	$(ECHO) Creating jre compact1 jimage
+ 	$(RM) -r $(JRE_COMPACT1_IMAGE_DIR)
+-	$(JLINK_TOOL) --add-modules $(JRE_COMPACT1_MODULES_LIST) \
++	$(JLINK_TOOL) --addmods $(JRE_COMPACT1_MODULES_LIST) \
+ 	    --output $(JRE_COMPACT1_IMAGE_DIR)
+ 	$(TOUCH) $@
+ 
+@@ -172,7 +171,7 @@
+     $(call DependOnVariable, JRE_COMPACT2_MODULES_LIST) $(BASE_RELEASE_FILE)
+ 	$(ECHO) Creating jre compact2 jimage
+ 	$(RM) -r $(JRE_COMPACT2_IMAGE_DIR)
+-	$(JLINK_TOOL) --add-modules $(JRE_COMPACT2_MODULES_LIST) \
++	$(JLINK_TOOL) --addmods $(JRE_COMPACT2_MODULES_LIST) \
+ 	    --output $(JRE_COMPACT2_IMAGE_DIR)
+ 	$(TOUCH) $@
+ 
+@@ -180,7 +179,7 @@
+     $(call DependOnVariable, JRE_COMPACT3_MODULES_LIST) $(BASE_RELEASE_FILE)
+ 	$(ECHO) Creating jre compact3 jimage
+ 	$(RM) -r $(JRE_COMPACT3_IMAGE_DIR)
+-	$(JLINK_TOOL) --add-modules $(JRE_COMPACT3_MODULES_LIST) \
++	$(JLINK_TOOL) --addmods $(JRE_COMPACT3_MODULES_LIST) \
+ 	    --output $(JRE_COMPACT3_IMAGE_DIR)
+ 	$(TOUCH) $@
+ 
+@@ -375,14 +374,14 @@
+       DEST := $(JDK_IMAGE_DIR)/lib, \
+   ))
+ 
+-  JDK_TARGETS += $(JDK_COPY_CLASSLIST)
++  #JDK_TARGETS += $(JDK_COPY_CLASSLIST)
+ 
+   $(eval $(call SetupCopyFiles, JRE_COPY_CLASSLIST, \
+       FILES := $(SUPPORT_OUTPUTDIR)/classlist/classlist, \
+       DEST := $(JRE_IMAGE_DIR)/lib, \
+   ))
+ 
+-  JRE_TARGETS += $(JRE_COPY_CLASSLIST)
++  #JRE_TARGETS += $(JRE_COPY_CLASSLIST)
+ endif
+ 
+ ################################################################################
+diff --git a/make/InterimImage.gmk b/make/InterimImage.gmk
+--- a/make/InterimImage.gmk
++++ b/make/InterimImage.gmk
+@@ -39,7 +39,7 @@
+ JMODS := $(patsubst %, $(IMAGES_OUTPUTDIR)/jmods/%.jmod, $(INTERIM_IMAGE_MODULES))
+ 
+ JLINK_TOOL := $(JLINK) \
+-    --module-path $(IMAGES_OUTPUTDIR)/jmods \
++    --modulepath $(IMAGES_OUTPUTDIR)/jmods \
+     --endian $(OPENJDK_BUILD_CPU_ENDIAN)
+ 
+ $(INTERIM_IMAGE_DIR)/$(JIMAGE_TARGET_FILE): $(JMODS) \
+@@ -48,7 +48,7 @@
+ 	$(RM) -r $(INTERIM_IMAGE_DIR)
+ 	$(JLINK_TOOL) \
+ 	    --output $(INTERIM_IMAGE_DIR) \
+-	    --add-modules $(INTERIM_MODULES_LIST)
++	    --addmods $(INTERIM_MODULES_LIST)
+ 	$(TOUCH) $@
+ 
+ TARGETS += $(INTERIM_IMAGE_DIR)/$(JIMAGE_TARGET_FILE)
+diff --git a/make/Main.gmk b/make/Main.gmk
+--- a/make/Main.gmk
++++ b/make/Main.gmk
+@@ -355,7 +355,7 @@
+ zip-docs:
+ 	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f Javadoc.gmk zip-docs)
+ 
+-ALL_TARGETS += docs-javadoc docs-jvmtidoc zip-docs
++ALL_TARGETS += docs-jvmtidoc zip-docs
+ 
+ ################################################################################
+ # Cross compilation support
+@@ -390,7 +390,7 @@
+ 	+($(CD) $(JDK_TOPDIR)/make && $(MAKE) $(MAKE_ARGS) -f GenerateClasslist.gmk)
+ endif
+ 
+-ALL_TARGETS += interim-image generate-classlist
++ALL_TARGETS += interim-image
+ 
+ ################################################################################
+ # Build tests
+@@ -441,8 +441,8 @@
+ 	     -f BuildFailureHandler.gmk images)
+ endif
+ 
+-ALL_TARGETS += prepare-test-image build-test-hotspot-jtreg-native \
+-    test-image-hotspot-jtreg-native build-test-jdk-jtreg-native \
++ALL_TARGETS += prepare-test-image\
++    build-test-jdk-jtreg-native \
+     test-image-jdk-jtreg-native build-test-lib build-test-failure-handler \
+     test-failure-handler test-image-failure-handler test-image-hotspot-gtest
+ 
+@@ -805,11 +805,21 @@
+ docs-image: docs-javadoc docs-jvmtidoc
+ 
+ # This target builds the test image
+-test-image: prepare-test-image test-image-hotspot-jtreg-native \
+-    test-image-jdk-jtreg-native test-image-failure-handler test-image-hotspot-gtest
++test-image: prepare-test-image \
++    test-image-jdk-jtreg-native test-image-failure-handler
++
++################################################################################
++# OpenJ9 target
++
++BUILD_OPENJ9_IMAGE :=
++ifeq ($(BUILD_OPENJ9), true)
++       BUILD_OPENJ9_IMAGE = ($(CD) $(SRC_ROOT)/make && $(MAKE) -f OpenJ9.mk)
++endif
++
++################################################################################
+ 
+ # all-images builds all our deliverables as images.
+-all-images: product-images test-image docs-image
++all-images: product-images test-image
+ 
+ # all-bundles packages all our deliverables as tar.gz bundles.
+ all-bundles: product-bundles test-bundles docs-bundles
+@@ -830,6 +840,8 @@
+ docs: docs-image
+ bundles: all-bundles
+ all: all-images
++	@echo Finished building OpenJDK
++	$(BUILD_OPENJ9_IMAGE)
+ 
+ ALL_TARGETS += default jdk images docs bundles all
+ 
+diff --git a/make/common/Modules.gmk b/make/common/Modules.gmk
+--- a/make/common/Modules.gmk
++++ b/make/common/Modules.gmk
+@@ -62,7 +62,6 @@
+     jdk.net \
+     jdk.sctp \
+     jdk.unsupported \
+-    jdk.vm.ci \
+     #
+ 
+ # to be deprivileged
+diff --git a/make/common/SetupJavaCompilers.gmk b/make/common/SetupJavaCompilers.gmk
+--- a/make/common/SetupJavaCompilers.gmk
++++ b/make/common/SetupJavaCompilers.gmk
+@@ -32,7 +32,7 @@
+ 
+ # If warnings needs to be non-fatal for testing purposes use a command like:
+ # make JAVAC_WARNINGS="-Xlint:all -Xmaxwarns 10000"
+-JAVAC_WARNINGS := -Xlint:all -Werror
++JAVAC_WARNINGS := -Xlint:all
+ 
+ # The BOOT_JAVAC setup uses the boot jdk compiler to compile the tools
+ # and the interim javac, to be run by the boot jdk.
+@@ -88,7 +88,7 @@
+ $(eval $(call SetupJavaCompiler,GENERATE_USINGJDKBYTECODE, \
+     JVM := $(JAVA_SMALL), \
+     JAVAC := $(NEW_JAVAC), \
+-    FLAGS := --upgrade-module-path $(JDK_OUTPUTDIR)/modules --system none $(DISABLE_WARNINGS), \
++    FLAGS := -upgrademodulepath $(JDK_OUTPUTDIR)/modules -system none $(DISABLE_WARNINGS), \
+     SERVER_DIR := $(SJAVAC_SERVER_DIR), \
+     SERVER_JVM := $(SJAVAC_SERVER_JAVA)))
+ 
