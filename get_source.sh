@@ -186,7 +186,8 @@ fi
 # Get clones of all absent nested repositories (harmless if already exist)
 if [ ${j9flag} = "true" ] ; then
         hg pull default
-	# clone absent OpenJDK repositories (except hotspot - harmless if already exist)
+        patch -p1 < ./openj9/patches/${hgtag}/hgforest.patch
+	# clone absent OpenJDK repositories (except hotspot - harmless if already exist)        
 	sh ./common/bin/hgforest.sh --with-j9 clone || exit $?
 
 	hgoptions=""
