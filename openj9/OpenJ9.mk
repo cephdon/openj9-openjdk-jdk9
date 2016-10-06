@@ -200,7 +200,6 @@ stage-j9:
 	mkdir $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B113
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190B113.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B113/rt-compressed.jar
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190/rt-compressed.jar
-	cp -r $(OPENJ9VM_SRC_DIR)/../rtctest/com.ibm.jvmti.tests $(OUTPUT_ROOT)/vm/
 	# actions required to hammer tr.open repo into the 'source.zip' shape
 	cp -r $(OPENJ9JIT_SRC_DIR)/* $(OUTPUT_ROOT)/vm/tr.source/
 	echo "#define TR_LEVEL_NAME \"`git -C $(OPENJ9JIT_SRC_DIR) describe --tags`\"" > $(OUTPUT_ROOT)/vm/tr.source/jit.version

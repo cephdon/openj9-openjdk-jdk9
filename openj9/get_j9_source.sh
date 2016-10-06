@@ -19,9 +19,6 @@ usage() {
 	echo "	-tooling-repo		the OpenJ9/tooling repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/tooling.git"
 	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tooling.git"
 	echo "	-tooling-branch		the OpenJ9/tooling git branch: master "
-	echo "	-rtctest-repo		the OpenJ9/rtctest repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/rtctest.git"
-	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/rtctest.git"
-	echo "	-rtctest-branch		the OpenJ9/test git branch: master "
 	echo "	-test-repo			the OpenJ9/test repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/test.git"
 	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/test.git"
 	echo "	-test-branch		the OpenJ9/test git branch: master "
@@ -41,8 +38,8 @@ fi
 
 declare -A j9repos
 declare -A branches
-declare -A default_j9repos=( [j9vm]=j9/j9vm [j9jcl]=joe_dekoning-ca/j9jcl [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [rtctest]=j9/rtctest [j9test]=j9/test [tr.open]=jit/tr.open )
-declare -A default_branches=( [j9vm]=master [j9jcl]=master [omr]=java-master [binaries]=master [tooling]=master [rtctest]=master [j9test]=master [tr.open]=java-master )
+declare -A default_j9repos=( [j9vm]=j9/j9vm [j9jcl]=joe_dekoning-ca/j9jcl [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [j9test]=j9/test [tr.open]=jit/tr.open )
+declare -A default_branches=( [j9vm]=master [j9jcl]=master [omr]=java-master [binaries]=master [tooling]=master [j9test]=master [tr.open]=java-master )
 
 
 ostype=`uname -s`
@@ -96,14 +93,6 @@ do
 
 		-tooling-branch=* )
 		branches[tooling]="${i#*=}"
-		;;
-
-		-rtctest-repo=* )
-		j9repos[rtctest]="${i#*=}"
-		;;
-
-		-rtctest-branch=* )
-		branches[rtctest]="${i#*=}"
 		;;
 
 		-test-repo=* )
@@ -171,6 +160,5 @@ for i in "${!default_j9repos[@]}" ; do
 	fi
 
 	git_clone_command="${git} clone --recursive -b ${branch} ${git_url} ${i}"
-	echo "Servicing $i"
 	${git_clone_command} || exit $?
 done
