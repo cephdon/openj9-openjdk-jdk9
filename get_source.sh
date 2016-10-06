@@ -71,9 +71,6 @@ usage() {
 	echo "	-tooling-repo			the OpenJ9/tooling repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/tooling.git"
 	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tooling.git"
 	echo "	-tooling-branch			the OpenJ9/tooling git branch: master "
-	echo "	-rtctest-repo			the OpenJ9/rtctest repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/rtctest.git"
-	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/rtctest.git"
-	echo "	-rtctest-branch			the OpenJ9/test git branch: master "
 	echo "	-test-repo				the OpenJ9/test repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/test.git"
 	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/test.git"
 	echo "	-test-branch			the OpenJ9/test git branch: master "
@@ -99,7 +96,7 @@ do
 		j9flag="true"
 		;;
 
-		-j9vm-repo=* | -j9vm-branch=* | -j9jcl-repo=* | -j9jcl-branch=* | -omr-repo=* | -omr-branch=* | -binaries-repo=* | -binaries-branch=* | -tooling-repo=* | -tooling-branch=* | -rtctest-repo=* | -rtctest-branch=* |-jit-repo=* |-jit-branch=* | -test-repo=* | -test-branch=* )
+		-j9vm-repo=* | -j9vm-branch=* | -j9jcl-repo=* | -j9jcl-branch=* | -omr-repo=* | -omr-branch=* | -binaries-repo=* | -binaries-branch=* | -tooling-repo=* | -tooling-branch=* | -jit-repo=* |-jit-branch=* | -test-repo=* | -test-branch=* )
 		j9_repos_options="${j9_repos_options} ${i}"
 		;;
 
@@ -127,7 +124,7 @@ hgtags="jdk-9+95 jdk-9+110 jdk-9+111 jdk-9+113"
 # check if sources loaded
 has_sources="false"
 if [ ${j9flag} = "true" ] ; then
-	all_repos="corba jaxp jaxws langtools jdk nashorn binaries j9vm j9jcl omr tooling rtctest j9test"
+	all_repos="corba jaxp jaxws langtools jdk nashorn binaries j9vm j9jcl omr tooling j9test"
 else
 	all_repos="corba jaxp jaxws langtools jdk hotspot nashorn"
 fi
@@ -223,8 +220,6 @@ if [ ${j9flag} = "true" ] ; then
 	# Get clones of OpenJ9 absent repositories
 	bash ./openj9/get_j9_source.sh ${j9_repos_options}
 
-	# copy OpenJ9 resources
-	cp ./openj9/OpenJ9.mk ./make/
 	patch -p1 < ./openj9/patches/${hgtag}/root.patch
 	cd langtools
 	patch -p1 < ./../openj9/patches/${hgtag}/langtools.patch
