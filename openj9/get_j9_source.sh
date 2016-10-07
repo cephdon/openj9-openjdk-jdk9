@@ -7,9 +7,6 @@ usage() {
 	echo "	-j9vm-repo			the OpenJ9/vm repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/j9vm.git"
 	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/j9vm.git"
 	echo "	-j9vm-branch		the OpenJ9/vm git branch: master "
-	echo "	-j9jcl-repo			the OpenJ9/j9jcl repository url: git002@gitlab-polyglot.hursley.ibm.com:joe_dekoning-ca/j9jcl.git"
-	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/j9jcl.git"
-	echo "	-j9jcl-branch		the OpenJ9/j9jcl git branch: master "
 	echo "	-omr-repo			the OpenJ9/omr repository url: git002@gitlab-polyglot.hursley.ibm.com:omr/omr.git"
 	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/omr.git"
 	echo "	-omr-branch			the OpenJ9/omr git branch: java-master "
@@ -38,8 +35,8 @@ fi
 
 declare -A j9repos
 declare -A branches
-declare -A default_j9repos=( [j9vm]=j9/j9vm [j9jcl]=joe_dekoning-ca/j9jcl [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [j9test]=j9/test [tr.open]=jit/tr.open )
-declare -A default_branches=( [j9vm]=master [j9jcl]=master [omr]=java-master [binaries]=master [tooling]=master [j9test]=master [tr.open]=java-master )
+declare -A default_j9repos=( [j9vm]=j9/j9vm [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [j9test]=j9/test [tr.open]=jit/tr.open )
+declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master [tooling]=master [j9test]=master [tr.open]=java-master )
 
 
 ostype=`uname -s`
@@ -61,14 +58,6 @@ do
 
 		-j9vm-branch=* )
 		branches[j9vm]="${i#*=}"
-		;;
-
-		-j9jcl-repo=* )
-		j9repos[j9jcl]="${i#*=}"
-		;;
-
-		-j9jcl-branch=* )
-		branches[j9jcl]="${i#*=}"
 		;;
 
 		-omr-repo=* )

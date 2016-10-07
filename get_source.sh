@@ -59,9 +59,6 @@ usage() {
 	echo "	-j9vm-repo				the OpenJ9/vm repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/j9vm.git"
 	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/j9vm.git"
 	echo "	-j9vm-branch			the OpenJ9/vm git branch: master "
-	echo "	-j9jcl-repo				the OpenJ9/j9jcl repository url: git002@gitlab-polyglot.hursley.ibm.com:joe_dekoning-ca/j9jcl.git"
-	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/j9jcl.git"
-	echo "	-j9jcl-branch			the OpenJ9/j9jcl git branch: master "
 	echo "	-omr-repo				the OpenJ9/omr repository url: git002@gitlab-polyglot.hursley.ibm.com:omr/omr.git"
 	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/omr.git"
 	echo "	-omr-branch				the OpenJ9/omr git branch: java-master "
@@ -96,7 +93,7 @@ do
 		j9flag="true"
 		;;
 
-		-j9vm-repo=* | -j9vm-branch=* | -j9jcl-repo=* | -j9jcl-branch=* | -omr-repo=* | -omr-branch=* | -binaries-repo=* | -binaries-branch=* | -tooling-repo=* | -tooling-branch=* | -jit-repo=* |-jit-branch=* | -test-repo=* | -test-branch=* )
+		-j9vm-repo=* | -j9vm-branch=* | -omr-repo=* | -omr-branch=* | -binaries-repo=* | -binaries-branch=* | -tooling-repo=* | -tooling-branch=* | -jit-repo=* |-jit-branch=* | -test-repo=* | -test-branch=* )
 		j9_repos_options="${j9_repos_options} ${i}"
 		;;
 
@@ -124,7 +121,7 @@ hgtags="jdk-9+95 jdk-9+110 jdk-9+111 jdk-9+113"
 # check if sources loaded
 has_sources="false"
 if [ ${j9flag} = "true" ] ; then
-	all_repos="corba jaxp jaxws langtools jdk nashorn binaries j9vm j9jcl omr tooling j9test"
+	all_repos="corba jaxp jaxws langtools jdk nashorn binaries j9vm omr tooling j9test"
 else
 	all_repos="corba jaxp jaxws langtools jdk hotspot nashorn"
 fi
