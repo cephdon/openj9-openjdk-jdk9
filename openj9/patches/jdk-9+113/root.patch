@@ -11,7 +11,7 @@ diff --git a/common/autoconf/flags.m4 b/common/autoconf/flags.m4
 +  AC_ARG_WITH(j9, [AS_HELP_STRING([--with-j9],
 +  [Build J9 VM sources])])
 +  if test "x$with-j9" != x; then
-+     if ! (test -d $SRC_ROOT/j9vm && test -d $SRC_ROOT/j9jcl); then
++     if ! (test -d $SRC_ROOT/j9vm && test -d $SRC_ROOT/omr); then
 +       AC_MSG_ERROR(["Cannot locate the path to OpenJ9 sources!"])
 +     fi
 +     BUILD_OPENJ9=true
