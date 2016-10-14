@@ -76,13 +76,6 @@ ifndef OPENJ9OMR_SRC_DIR
 	$(error Missing OpenJ9 OMR sources! Run get_source.sh with j9 option!)
 endif
 
-OPENJ9JCL_SRC_DIR := $(shell find $(SRC_ROOT) -maxdepth 1 -type d | grep j9jcl)
-#$(info OPENJ9JCL_SRC_DIR = $(OPENJ9JCL_SRC_DIR))
-
-ifndef OPENJ9JCL_SRC_DIR
-	$(error Missing OpenJ9 JCL sources! Run get_source.sh with j9 option!)
-endif
-
 define \n
 
 
@@ -122,7 +115,7 @@ define create-module-info
 endef
 
 define merge-module-info
-	$(BOOT_JDK)/bin/java -cp $(OPENJ9JCL_SRC_DIR)/build.tools/ com.ibm.moduletools.ModuleInfoMerger $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/module-info.java $(OUTPUT_ROOT)/jcl_workdir/j9jcl/$(module)/module-info_raw.java $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/module-info.java
+	$(BOOT_JDK)/bin/java -cp $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/build.tools/ com.ibm.moduletools.ModuleInfoMerger $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/module-info.java $(OUTPUT_ROOT)/jcl_workdir/j9jcl/$(module)/module-info_raw.java $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/module-info.java
 	rm -rf $(OUTPUT_ROOT)/jcl_workdir/j9jcl/$(module)/module-info*
 	cp -r $(OUTPUT_ROOT)/jcl_workdir/j9jcl/$(module)/* $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/
 	rm -rf $(OUTPUT_ROOT)/jcl_workdir/modules_root/$(module)/*
@@ -200,7 +193,6 @@ stage-j9:
 	mkdir $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B136
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190B136.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B136/rt-compressed.jar
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190/rt-compressed.jar
-	cp -r $(OPENJ9VM_SRC_DIR)/../rtctest/com.ibm.jvmti.tests $(OUTPUT_ROOT)/vm/
 	# actions required to hammer tr.open repo into the 'source.zip' shape
 	cp -r $(OPENJ9JIT_SRC_DIR)/* $(OUTPUT_ROOT)/vm/tr.source/
 	echo "#define TR_LEVEL_NAME \"`git -C $(OPENJ9JIT_SRC_DIR) describe --tags`\"" > $(OUTPUT_ROOT)/vm/tr.source/jit.version
@@ -213,6 +205,7 @@ stage-j9:
 run-preprocessors-j9:
 	@echo "---------------- Running OpenJ9 preprocessors ------------------------"
 	cd $(OUTPUT_ROOT)/vm
+	$(BOOT_JDK)/bin/javac "$(OUTPUT_ROOT)/vm/J9 JCL Build Tools/src/com/ibm/moduletools/ModuleInfoMerger.java" -d $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/build.tools
 	# checkSpec copya2e configure uma j9vm_sha rpcgen tracing nls hooktool constantpool ddr
 	sed -i -e 's/1.5/1.8/g' $(OUTPUT_ROOT)/vm/VM_Source-Tools/buildj9tools.mk
 	(cd $(OUTPUT_ROOT)/vm && make -f buildtools.mk SPEC=linux_x86-64 JAVA_HOME=$(BOOT_JDK) buildtools)

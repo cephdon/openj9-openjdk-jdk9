@@ -30584,7 +30584,7 @@ $as_echo "$as_me: WARNING: Ignoring LDFLAGS($LDFLAGS) found in environment. Use 
 # Check whether --with-j9 was given.
 BUILD_OPENJ9=false
 if test "${with_j9+set}" = set; then :
-  if ! (test -d $SRC_ROOT/vm && test -d $SRC_ROOT/j9jcl); then :
+  if ! (test -d $SRC_ROOT/j9vm && test -d $SRC_ROOT/omr); then :
     as_fn_error $? "Cannot locate the path to OpenJ9 sources"
   fi
   BUILD_OPENJ9=true
