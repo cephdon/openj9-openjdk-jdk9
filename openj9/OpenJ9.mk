@@ -115,7 +115,7 @@ define create-module-info
 endef
 
 define merge-module-info
-	$(BOOT_JDK)/bin/java -cp $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/build.tools/ com.ibm.moduletools.ModuleInfoMerger $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/module-info.java $(OUTPUT_ROOT)/jcl_workdir/j9jcl/$(module)/module-info_raw.java $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/module-info.java
+	$(BOOT_JDK)/bin/java -cp $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/build.tools/ com.ibm.moduletools.ModuleInfoMerger $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/module-info.java $(OUTPUT_ROOT)/jcl_workdir/j9jcl/$(module)/module-info.java $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/module-info.java
 	rm -rf $(OUTPUT_ROOT)/jcl_workdir/j9jcl/$(module)/module-info*
 	cp -r $(OUTPUT_ROOT)/jcl_workdir/j9jcl/$(module)/* $(OUTPUT_ROOT)/jcl_workdir/merge/$(module)/classes/
 	rm -rf $(OUTPUT_ROOT)/jcl_workdir/modules_root/$(module)/*
