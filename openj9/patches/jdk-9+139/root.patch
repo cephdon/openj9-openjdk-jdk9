@@ -17,8 +17,8 @@ diff --git a/common/autoconf/boot-jdk.m4 b/common/autoconf/boot-jdk.m4
  
 -  JMOD="$BUILD_JDK/bin/jmod"
 -  JLINK="$BUILD_JDK/bin/jlink"
-+  JMOD="$BOOT_JDK/bin/jmod"
-+  JLINK="$BOOT_JDK/bin/jlink"
++  JMOD="$ORACLE_BOOT_JDK/bin/jmod"
++  JLINK="$ORACLE_BOOT_JDK/bin/jlink"
    AC_SUBST(JMOD)
    AC_SUBST(JLINK)
  
@@ -90,115 +90,6 @@ diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
  # Tools adhering to a minimal and common standard of posix compliance.
  AWK:=@AWK@
  BASENAME:=@BASENAME@
-diff --git a/make/CreateJmods.gmk b/make/CreateJmods.gmk
---- a/make/CreateJmods.gmk
-+++ b/make/CreateJmods.gmk
-@@ -77,8 +77,8 @@
- 
-     EXCLUDE_PATTERN := $(strip $(subst $(SPACE),|,$(strip $(ALL_UPGRADEABLE_MODULES))))
- 
--    JMOD_FLAGS += --module-path $(JMODS_DIR) \
--        --hash-modules '^(?!$(EXCLUDE_PATTERN))'
-+    JMOD_FLAGS += --modulepath $(JMODS_DIR) \
-+        #--hash-modules '^(?!$(EXCLUDE_PATTERN))'
-   endif
- endif
- 
-@@ -102,7 +102,7 @@
-             --os-name $(REQUIRED_OS_NAME) \
-             --os-arch $(OPENJDK_TARGET_CPU_LEGACY) \
-             --os-version $(REQUIRED_OS_VERSION) \
--            --module-path $(JMODS_DIR) \
-+            --modulepath $(JMODS_DIR) \
-             --exclude '**{_the.*,*.diz,*.debuginfo,*.dSYM/**,*.pdb,*.map}' \
- 	    $(JMOD_FLAGS) $(SUPPORT_OUTPUTDIR)/jmods/$(notdir $@)
- 	$(MV) $(SUPPORT_OUTPUTDIR)/jmods/$(notdir $@) $@
-diff --git a/make/Images.gmk b/make/Images.gmk
---- a/make/Images.gmk
-+++ b/make/Images.gmk
-@@ -114,7 +114,7 @@
- JLINK_JLI_CLASSES :=
- ifeq ($(ENABLE_GENERATE_CLASSLIST), true)
-   JLINK_ORDER_RESOURCES += @$(SUPPORT_OUTPUTDIR)/classlist/classlist
--  JLINK_JLI_CLASSES := --generate-jli-classes=@$(SUPPORT_OUTPUTDIR)/classlist/jli_trace.out
-+#  JLINK_JLI_CLASSES := --generate-jli-classes=@$(SUPPORT_OUTPUTDIR)/classlist/jli_trace.out
- endif
- JLINK_ORDER_RESOURCES += \
-     /java.base/java/** \
-@@ -124,10 +124,9 @@
-     /jdk.localedata/** \
-     #
- 
--JLINK_TOOL := $(JLINK) --module-path $(IMAGES_OUTPUTDIR)/jmods \
-+JLINK_TOOL := $(JLINK) --modulepath $(IMAGES_OUTPUTDIR)/jmods \
-     --endian $(OPENJDK_BUILD_CPU_ENDIAN) \
-     --release-info $(BASE_RELEASE_FILE) \
--    --order-resources=$(call CommaList, $(JLINK_ORDER_RESOURCES)) \
-     $(JLINK_JLI_CLASSES) \
-     #
- 
-@@ -140,7 +139,7 @@
- 	$(ECHO) Creating jdk jimage
- 	$(RM) -r $(JDK_IMAGE_DIR)
- 	$(JLINK_TOOL) --output $(JDK_IMAGE_DIR) \
--	    --add-modules $(JDK_MODULES_LIST) $(JLINK_EXTRA_OPTS)
-+	    --addmods $(JDK_MODULES_LIST) $(JLINK_EXTRA_OPTS)
- 	$(TOUCH) $@
- 
- $(JRE_IMAGE_DIR)/$(JIMAGE_TARGET_FILE): $(JMODS) \
-@@ -148,7 +147,7 @@
- 	$(ECHO) Creating jre jimage
- 	$(RM) -r $(JRE_IMAGE_DIR)
- 	$(JLINK_TOOL) --output $(JRE_IMAGE_DIR) \
--	    --add-modules $(JRE_MODULES_LIST)
-+	    --addmods $(JRE_MODULES_LIST)
- 	$(TOUCH) $@
- 
- JRE_COMPACT1_IMAGE_DIR := $(JRE_IMAGE_DIR)-compact1
-@@ -159,7 +158,7 @@
-     $(call DependOnVariable, JRE_COMPACT1_MODULES_LIST) $(BASE_RELEASE_FILE)
- 	$(ECHO) Creating jre compact1 jimage
- 	$(RM) -r $(JRE_COMPACT1_IMAGE_DIR)
--	$(JLINK_TOOL) --add-modules $(JRE_COMPACT1_MODULES_LIST) \
-+	$(JLINK_TOOL) --addmods $(JRE_COMPACT1_MODULES_LIST) \
- 	    --output $(JRE_COMPACT1_IMAGE_DIR)
- 	$(TOUCH) $@
- 
-@@ -167,7 +166,7 @@
-     $(call DependOnVariable, JRE_COMPACT2_MODULES_LIST) $(BASE_RELEASE_FILE)
- 	$(ECHO) Creating jre compact2 jimage
- 	$(RM) -r $(JRE_COMPACT2_IMAGE_DIR)
--	$(JLINK_TOOL) --add-modules $(JRE_COMPACT2_MODULES_LIST) \
-+	$(JLINK_TOOL) --addmods $(JRE_COMPACT2_MODULES_LIST) \
- 	    --output $(JRE_COMPACT2_IMAGE_DIR)
- 	$(TOUCH) $@
- 
-@@ -175,7 +174,7 @@
-     $(call DependOnVariable, JRE_COMPACT3_MODULES_LIST) $(BASE_RELEASE_FILE)
- 	$(ECHO) Creating jre compact3 jimage
- 	$(RM) -r $(JRE_COMPACT3_IMAGE_DIR)
--	$(JLINK_TOOL) --add-modules $(JRE_COMPACT3_MODULES_LIST) \
-+	$(JLINK_TOOL) --addmods $(JRE_COMPACT3_MODULES_LIST) \
- 	    --output $(JRE_COMPACT3_IMAGE_DIR)
- 	$(TOUCH) $@
- 
-@@ -370,14 +369,14 @@
-       DEST := $(JDK_IMAGE_DIR)/lib, \
-   ))
- 
--  JDK_TARGETS += $(JDK_COPY_CLASSLIST)
-+  #JDK_TARGETS += $(JDK_COPY_CLASSLIST)
- 
-   $(eval $(call SetupCopyFiles, JRE_COPY_CLASSLIST, \
-       FILES := $(SUPPORT_OUTPUTDIR)/classlist/classlist, \
-       DEST := $(JRE_IMAGE_DIR)/lib, \
-   ))
- 
--  JRE_TARGETS += $(JRE_COPY_CLASSLIST)
-+  #JRE_TARGETS += $(JRE_COPY_CLASSLIST)
- endif
- 
- ################################################################################
 diff --git a/make/InterimImage.gmk b/make/InterimImage.gmk
 --- a/make/InterimImage.gmk
 +++ b/make/InterimImage.gmk

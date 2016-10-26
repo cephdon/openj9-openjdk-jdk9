@@ -126,12 +126,13 @@ else
 	all_repos="corba jaxp jaxws langtools jdk hotspot nashorn"
 fi
 
+has_sources="true"
 for i in ${all_repos} ; do
 	if [ -d ${i} ] ; then
 		echo "${i} sources already loaded"
-		has_sources="true"
 	else
-		has_source="false"
+		echo "${i} sources not loaded"
+		has_sources="false"
 		break
 	fi
 done
