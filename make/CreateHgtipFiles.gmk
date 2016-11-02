@@ -1,11 +1,12 @@
-#!/bin/bash
 #
-# Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 only, as
-# published by the Free Software Foundation.
+# published by the Free Software Foundation.  Oracle designates this
+# particular file as subject to the "Classpath" exception as provided
+# by Oracle in the LICENSE file that accompanied this code.
 #
 # This code is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -22,20 +23,33 @@
 # questions.
 #
 
-if [ -x /usr/bin/ggrep ] ; then
-    # Gnu grep on Solaris
-    # (reference configure and build/solaris-i586-clientANDserver-release/spec.gmk
-    GREP=/usr/bin/ggrep
-else
-    GREP=grep
-fi
-#
-EXP="Note: Some input files use or override a deprecated API."
-EXP="${EXP}|Note: Recompile with -Xlint:deprecation for details."
-EXP="${EXP}|Note: Some input files use unchecked or unsafe operations."
-EXP="${EXP}|Note: Recompile with -Xlint:unchecked for details."
-EXP="${EXP}| warning"
-EXP="${EXP}|uses or overrides a deprecated API."
-EXP="${EXP}|uses unchecked or unsafe operations."
-#
-${GREP} --line-buffered -v -E "${EXP}"
+default: all
+
+include $(SPEC)
+include MakeBase.gmk
+
+define SetupCreateHgtip
+
+  $$(strip $1)/$(HGTIP_FILENAME): FRC
+	$(HG) tip --repository $$(strip $1) --template '{node|short}\n' > $$@.tmp
+	if [ ! -f $$@ ] || [ "`$(CAT) $$@`" != "`$(CAT) $$@.tmp`" ]; then \
+	  $(MV) $$@.tmp $$@ ; \
+	else \
+	  $(RM) $$@.tmp ; \
+	fi
+
+  TARGETS += $$(strip $1)/$(HGTIP_FILENAME)
+
+endef
+
+# Only try to create the tips if finding an actual hg repository. This will be
+# false if building from a source bundle.
+$(foreach r, $(call FindAllReposAbs), \
+  $(if $(wildcard $r/.hg), $(eval $(call SetupCreateHgtip, $r))) \
+)
+
+all: $(TARGETS)
+
+FRC:
+
+.PHONY: all

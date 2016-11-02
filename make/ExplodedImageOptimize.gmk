@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -23,40 +23,27 @@
 # questions.
 #
 
+# Runs a tool on the exploded image to improve performance
+
 default: all
 
 include $(SPEC)
 include MakeBase.gmk
-include JavaCompilation.gmk
-include SetupJavaCompilers.gmk
+include $(JDK_TOPDIR)/make/ModuleTools.gmk
 
-TARGETS :=
+################################################################################
 
-TEST_LIB_SOURCE_DIR := $(TOPDIR)/test/lib
-TEST_LIB_SUPPORT := $(SUPPORT_OUTPUTDIR)/test/lib
+PACKAGES_ATTRIBUTE_TARGET := $(JDK_OUTPUTDIR)/_packages_attribute.done
+ALL_MODULEINFO_CLASSES := $(wildcard $(JDK_OUTPUTDIR)/modules/*/module_info.class)
 
-$(eval $(call SetupJavaCompilation, BUILD_WB_JAR, \
-    SETUP := GENERATE_USINGJDKBYTECODE, \
-    SRC := $(TEST_LIB_SOURCE_DIR)/sun, \
-    BIN := $(TEST_LIB_SUPPORT)/wb_classes, \
-    JAR := $(TEST_LIB_SUPPORT)/wb.jar, \
-    ADD_JAVAC_FLAGS := $(JAVAC_WARNINGS), \
-))
+$(PACKAGES_ATTRIBUTE_TARGET): $(ALL_MODULEINFO_CLASSES) $(BUILD_JIGSAW_CLASSES)
+	$(call LogInfo, Optimizing the exploded image)
+	$(TOOL_ADD_PACKAGES_ATTRIBUTE) $(JDK_OUTPUTDIR)
 
-TARGETS += $(BUILD_WB_JAR)
+TARGETS := $(PACKAGES_ATTRIBUTE_TARGET)
 
-# test-lib.jar will contain only hprof classes until JDK-8081381 is resolved
-$(eval $(call SetupJavaCompilation, BUILD_TEST_LIB_JAR, \
-    SETUP := GENERATE_USINGJDKBYTECODE, \
-    SRC := $(TEST_LIB_SOURCE_DIR)/jdk/test/lib/hprof, \
-    BIN := $(TEST_LIB_SUPPORT)/test-lib_classes, \
-    JAR := $(TEST_LIB_SUPPORT)/test-lib.jar, \
-))
-
-TARGETS += $(BUILD_TEST_LIB_JAR)
-
-##########################################################################################
+################################################################################
 
 all: $(TARGETS)
 
-.PHONY: default all
+.PHONY: all default
