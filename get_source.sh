@@ -228,7 +228,7 @@ if [ ${j9flag} = "true" ] ; then
 
 else
 	# Get clones of all OpenJDK absent nested repositories (harmless if already exist)
-	sh ./common/bin/hgforest.sh clone || exit $?
+	sh ./common/bin/hgforest.sh clone "$@" || exit $?
 
 	# Update all existing repositories to the latest sources
 	sh ./common/bin/hgforest.sh pull -u
