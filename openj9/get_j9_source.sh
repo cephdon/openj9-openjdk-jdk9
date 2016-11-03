@@ -121,7 +121,9 @@ git=`which git`
 repo_url=`git config --local --get remote.origin.url`
 protocol=https
 
-if [[ $repo_url == *"$protocol"* ]] ; then 
+if [[ $repo_url == "" ]] ; then
+	base_git_url=git002@gitlab-polyglot.hursley.ibm.com:
+elif [[ $repo_url == *"$protocol"* ]] ; then
 	# http protocol: e.g. https://gitlab-polyglot.hursley.ibm.com/omr/openjdk.git
 	b=`expr index ${repo_url:8} /`
 	base_git_url=`expr substr ${repo_url:8} 1 $b`
