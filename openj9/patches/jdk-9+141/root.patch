@@ -1,13 +1,6 @@
 diff --git a/common/autoconf/boot-jdk.m4 b/common/autoconf/boot-jdk.m4
 --- a/common/autoconf/boot-jdk.m4
 +++ b/common/autoconf/boot-jdk.m4
-@@ -1,5 +1,5 @@
- #
--# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
-+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
- # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- #
- # This code is free software; you can redistribute it and/or modify it
 @@ -305,7 +305,8 @@
    BOOT_JDK_SOURCETARGET="-source 8 -target 8"
    AC_SUBST(BOOT_JDK_SOURCETARGET)
@@ -65,13 +58,6 @@ diff --git a/common/autoconf/flags.m4 b/common/autoconf/flags.m4
 diff --git a/common/autoconf/source-dirs.m4 b/common/autoconf/source-dirs.m4
 --- a/common/autoconf/source-dirs.m4
 +++ b/common/autoconf/source-dirs.m4
-@@ -1,5 +1,5 @@
- #
--# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
-+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
- # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- #
- # This code is free software; you can redistribute it and/or modify it
 @@ -74,7 +74,7 @@
      cd "$with_import_hotspot"
      HOTSPOT_DIST="`pwd`"
@@ -84,26 +70,7 @@ diff --git a/common/autoconf/source-dirs.m4 b/common/autoconf/source-dirs.m4
 diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
 --- a/common/autoconf/spec.gmk.in
 +++ b/common/autoconf/spec.gmk.in
-@@ -175,7 +175,7 @@
- VERSION_STRING := @VERSION_STRING@
- # The short version string, without trailing zeroes and just PRE, if present.
- VERSION_SHORT := @VERSION_SHORT@
--# The Java specification version. It usually equals to the major version number.
-+# The Java specification version. It usually equals the major version number.
- VERSION_SPECIFICATION := @VERSION_MAJOR@
- # A GA version is defined by the PRE string being empty. Rather than testing for
- # that, this variable defines it with true/false.
-@@ -244,9 +244,6 @@
- # Only build headless support or not
- ENABLE_HEADLESS_ONLY := @ENABLE_HEADLESS_ONLY@
- 
--# Legacy support
--USE_NEW_HOTSPOT_BUILD:=@USE_NEW_HOTSPOT_BUILD@
--
- # JDK_OUTPUTDIR specifies where a working jvm is built.
- # You can run $(JDK_OUTPUTDIR)/bin/java
- # Though the layout of the contents of $(JDK_OUTPUTDIR) is not
-@@ -579,7 +576,7 @@
+@@ -576,7 +576,7 @@
      jdk.jdeps jdk.javadoc jdk.rmic
  ifeq ($(BOOT_JDK_MODULAR), true)
    INTERIM_OVERRIDE_MODULES_ARGS = $(foreach m, $(INTERIM_OVERRIDE_MODULES), \
@@ -112,7 +79,7 @@ diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
    INTERIM_LANGTOOLS_ARGS = $(INTERIM_OVERRIDE_MODULES_ARGS)
    JAVAC_MAIN_CLASS = -m jdk.compiler/com.sun.tools.javac.Main
    JAVADOC_MAIN_CLASS = -m jdk.javadoc/jdk.javadoc.internal.tool.Main
-@@ -607,6 +604,10 @@
+@@ -604,6 +604,10 @@
    RC_FLAGS:=@RC_FLAGS@
  endif
  
@@ -147,85 +114,7 @@ diff --git a/make/InterimImage.gmk b/make/InterimImage.gmk
 diff --git a/make/Main.gmk b/make/Main.gmk
 --- a/make/Main.gmk
 +++ b/make/Main.gmk
-@@ -93,16 +93,13 @@
- ################################################################################
- # Special targets for certain modules
- 
--import-hotspot:
--	+($(CD) $(JDK_TOPDIR)/make && $(MAKE) $(MAKE_ARGS) -f Import.gmk)
--
- unpack-sec:
- 	+($(CD) $(JDK_TOPDIR)/make && $(MAKE) $(MAKE_ARGS) -f UnpackSecurity.gmk)
- 
- generate-exported-symbols:
- 	+($(CD) $(TOPDIR)/make && $(MAKE) $(MAKE_ARGS) -f BuildStatic.gmk)
- 
--ALL_TARGETS += import-hotspot unpack-sec generate-exported-symbols
-+ALL_TARGETS += unpack-sec generate-exported-symbols
- 
- ################################################################################
- # Gensrc targets, generating source before java compilation can be done
-@@ -240,7 +237,7 @@
- # Build hotspot target
- 
- ifeq ($(BUILD_HOTSPOT),true)
--hotspot:
-+  hotspot:
- 	+($(CD) $(HOTSPOT_TOPDIR)/make && $(MAKE) $(MAKE_ARGS) -f BuildHotspot.gmk)
- endif
- 
-@@ -269,23 +266,6 @@
- ALL_TARGETS += generate-summary
- 
- ################################################################################
--# Strip binaries targets
--
--STRIP_MODULES := $(sort $(LIBS_MODULES) $(LAUNCHER_MODULES) $(COPY_MODULES) \
--    $(GENDATA_MODULES))
--STRIP_TARGETS := $(addsuffix -strip, $(STRIP_MODULES))
--
--define DeclareStripRecipe
--  $1-strip:
--	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f StripBinaries.gmk \
--	    MODULE=$1)
--endef
--
--$(foreach m, $(STRIP_MODULES), $(eval $(call DeclareStripRecipe,$m)))
--
--ALL_TARGETS += $(STRIP_TARGETS)
--
--################################################################################
- # Jmod targets
- 
- JMOD_MODULES := $(ALL_MODULES)
-@@ -334,8 +314,14 @@
- jrtfs-jar:
- 	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f JrtfsJar.gmk)
- 
--jimages:
--	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f Images.gmk jimages)
-+jdk-image:
-+	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f Images.gmk jdk)
-+
-+jre-image:
-+	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f Images.gmk jre)
-+
-+symbols-image:
-+	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f Images.gmk symbols)
- 
- profiles:
- 	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f Images.gmk profiles)
-@@ -347,7 +333,8 @@
- 	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f ExplodedImageOptimize.gmk)
- 
- ALL_TARGETS += source-tips create-hgtip-files bootcycle-images zip-security \
--    zip-source jrtfs-jar jimages profiles mac-bundles-jdk \
-+    zip-source jrtfs-jar jdk-image jre-image \
-+    symbols-image profiles mac-bundles-jdk \
-     exploded-image-optimize
- 
- ################################################################################
-@@ -362,7 +349,7 @@
+@@ -349,7 +349,7 @@
  zip-docs:
  	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f Javadoc.gmk zip-docs)
  
@@ -234,16 +123,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  ################################################################################
  # Cross compilation support
-@@ -386,7 +373,7 @@
- ALL_TARGETS += create-buildjdk-copy create-buildjdk-interim-image
- 
- ################################################################################
--# The interim-image is a small jlinked image that is used to generate artifacts 
-+# The interim-image is a small jlinked image that is used to generate artifacts
- # at build time for use when linking the real images.
- 
- interim-image:
-@@ -397,7 +384,7 @@
+@@ -384,7 +384,7 @@
  	+($(CD) $(JDK_TOPDIR)/make && $(MAKE) $(MAKE_ARGS) -f GenerateClasslist.gmk)
  endif
  
@@ -252,7 +132,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  ################################################################################
  # Build tests
-@@ -448,8 +435,8 @@
+@@ -435,8 +435,8 @@
  	     -f BuildFailureHandler.gmk images)
  endif
  
@@ -263,202 +143,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
      test-image-jdk-jtreg-native build-test-lib build-test-failure-handler \
      test-failure-handler test-image-failure-handler test-image-hotspot-gtest
  
-@@ -548,11 +535,9 @@
- 
-   hotspot-ide-project: hotspot exploded-image
- 
--  import-hotspot: hotspot
--
-   generate-exported-symbols: java.base-libs jdk.jdwp.agent-libs
- 
--  $(LIBS_TARGETS): import-hotspot
-+  $(LIBS_TARGETS): hotspot
- 
-   $(LAUNCHER_TARGETS): java.base-libs
- 
-@@ -563,7 +548,7 @@
-   # The demos are currently linking to libjvm and libjava, just like all other
-   # jdk libs, even though they don't need to. To avoid warnings, make sure they
-   # aren't built until after libjava and libjvm are available to link to.
--  demos-jdk: $(JAVA_TARGETS)
-+  demos-jdk: java.base-libs exploded-image-optimize
- 
-   # Declare dependency from <module>-java to <module>-gensrc
-   $(foreach m, $(GENSRC_MODULES), $(eval $m-java: $m-gensrc))
-@@ -607,17 +592,8 @@
-   # Explicitly add dependencies for special targets
-   java.base-java: unpack-sec
- 
--  # The copy target copies files generated by gensrc
--  java.base-copy-hotspot: java.base-gensrc-hotspot
--
-   jdk.jdeps-gendata: java rmic
- 
--  # Declare dependencies from <module>-strip to libs, launchers, gendata and copy
--  $(foreach m, $(LIBS_MODULES), $(eval $m-strip: $m-libs))
--  $(foreach m, $(LAUNCHER_MODULES), $(eval $m-strip: $m-launchers))
--  $(foreach m, $(GENDATA_MODULES), $(eval $m-strip: $m-gendata))
--  $(foreach m, $(COPY_MODULES), $(eval $m-strip: $m-copy))
--
-   # Declare dependencies between jmod targets. Only java.base jmod needs access
-   # to the other jmods to be built.
-   # When creating a BUILDJDK, we don't need to add hashes to java.base, thus
-@@ -628,7 +604,6 @@
-   endif
- 
-   # Declare dependencies from <module>-jmod to all other module targets
--  $(foreach m, $(STRIP_MODULES), $(eval $m-jmod: $m-strip))
-   # When creating a BUILDJDK, the java compilation has already been done by the
-   # normal build and copied in.
-   ifneq ($(CREATING_BUILDJDK), true)
-@@ -640,23 +615,33 @@
-   $(foreach m, $(LAUNCHER_MODULES), $(eval $m-jmod: $m-launchers))
-   $(foreach m, $(COPY_MODULES), $(eval $m-jmod: $m-copy))
- 
--  # Jmods cannot be created until we have the jlink tool ready to run, which requires
--  # all java modules to be compiled and jdk.jlink-launchers.
--  # And we also need to copy jvm.cfg (done in java.base-copy) and tzdb.dat (done in
--  # java.base-gendata) to the appropriate location otherwise jimage, jlink and jmod won't start.
--  $(JMOD_TARGETS): java.base-libs java.base-copy java.base-gendata jdk.jlink-launchers
--  # When creating a BUILDJDK, the java compilation has already been done by the
--  # normal build and copied in.
--  ifneq ($(CREATING_BUILDJDK), true)
--    $(JMOD_TARGETS): java
--  endif
--
-+  # Jmods cannot be created until we have the jmod tool ready to run. During
-+  # a normal build we run it from the exploded image, but when cross compiling
-+  # it's run from the buildjdk, which is either created at build time or user
-+  # supplied.
-+  #
-+  # For the exploded image to be runnable, all java modules and
-+  # jdk.jlink-launchers need to be built. We also need to copy jvm.cfg (done
-+  # in java.base-copy) and tzdb.dat (done in java.base-gendata) to the
-+  # appropriate location otherwise jimage, jlink and jmod won't start. This
-+  # also applies when creating the buildjdk.
-+  DEFAULT_JMOD_DEPS := java.base-libs java.base-copy java.base-gendata \
-+      jdk.jlink-launchers
-+  # When cross compiling and buildjdk is to be created, depend on creating the
-+  # buildjdk instead of the default dependencies.
-   ifeq ($(CREATE_BUILDJDK), true)
--    # Avoid calling create-buildjdk from within a create-buildjdk call
-+    # Avoid calling create-buildjdk from within a create-buildjdk call.
-     ifneq ($(CREATING_BUILDJDK), true)
-       $(JMOD_TARGETS): create-buildjdk
-       buildtools-modules: create-buildjdk
-+    else
-+      # While actually creating the buildjdk, the default deps applies.
-+      $(JMOD_TARGETS): $(DEFAULT_JMOD_DEPS)
-     endif
-+  else
-+    # The normal non cross compilation case uses the default deps.
-+    # To avoid races with the optimize target, that also needs to happen first.
-+    $(JMOD_TARGETS): $(DEFAULT_JMOD_DEPS) exploded-image-optimize
-   endif
- 
-   zip-security: java.base-java java.security.jgss-java java.security.jgss-libs \
-@@ -678,18 +663,23 @@
-     endif
-     generate-classlist: buildtools-jdk
- 
--    jimages: generate-classlist
-+    jdk-image jre-image: generate-classlist
-   endif
- 
--  jimages: jmods zip-source source-tips demos samples jrtfs-jar
-+  jdk-image: jmods zip-source source-tips demos samples jrtfs-jar
-+  jre-image: jmods source-tips jrtfs-jar
- 
-   profiles: jmods zip-source source-tips jrtfs-jar
- 
--  mac-bundles-jdk: jimages
-+  mac-bundles-jdk: jdk-image jre-image
- 
--  exploded-image-optimize: exploded-image-base buildtools-modules
-+  # The optimize target can run as soon as the modules dir has been completely
-+  # populated (java, copy and gendata targets) and the basic libs and launchers
-+  # have been built.
-+  exploded-image-optimize: java copy gendata java.base-libs java.base-launchers \
-+      buildtools-modules
- 
--  bootcycle-images: jimages
-+  bootcycle-images: jdk-image
- 
-   docs-javadoc: $(GENSRC_TARGETS) rmic
- 
-@@ -697,7 +687,7 @@
- 
-   zip-docs: docs-javadoc docs-jvmtidoc
- 
--  test: jimages test-image
-+  test: jdk-image test-image
- 
-   create-buildjdk-copy: jdk.jlink-java java.base-gendata \
-       $(addsuffix -java, $(INTERIM_IMAGE_MODULES))
-@@ -708,7 +698,7 @@
- 
-   test-make: clean-test-make
- 
--  build-test-lib: java
-+  build-test-lib: exploded-image-optimize
- 
-   build-test-failure-handler: interim-langtools
- 
-@@ -716,7 +706,7 @@
- 
-   test-image-failure-handler: build-test-failure-handler
- 
--  build-test-hotspot-jtreg-native: buildtools-jdk import-hotspot
-+  build-test-hotspot-jtreg-native: buildtools-jdk hotspot
- 
-   build-test-jdk-jtreg-native: buildtools-jdk
- 
-@@ -728,7 +718,7 @@
- 
-   test-hotspot-internal: exploded-image
- 
--  test-hotspot-jtreg: jimages test-image
-+  test-hotspot-jtreg: jdk-image test-image
- 
-   test-hotspot-gtest: exploded-image test-image-hotspot-gtest
- 
-@@ -766,8 +756,6 @@
- 
- jmods: $(JMOD_TARGETS)
- 
--strip-binaries: $(STRIP_TARGETS)
--
- # Explicitly declare dependency for virtual target jdk.jdwp.agent-gensrc which
- # is actually handled by jdk.jdi-gensrc
- jdk.jdwp.agent-gensrc: jdk.jdi-gensrc
-@@ -787,7 +775,12 @@
- 
- # The "exploded image" is a locally runnable JDK in $(BUILD_OUTPUT)/jdk.
- exploded-image-base: $(ALL_MODULES)
--exploded-image: exploded-image-base exploded-image-optimize
-+exploded-image: exploded-image-base
-+# When cross compiling, no need to optimize the exploded image since it won't
-+# be runnable on the host platform anyway.
-+ifneq ($(COMPILE_TYPE), cross)
-+  exploded-image: exploded-image-optimize
-+endif
- 
- create-buildjdk: create-buildjdk-copy create-buildjdk-interim-image
- 
-@@ -798,7 +791,11 @@
- 
- # This target builds the product images, e.g. the JRE and JDK image
- # (and possibly other, more specific versions)
--product-images: jimages demos samples zip-security exploded-image
-+product-images: jdk-image jre-image symbols-image exploded-image
-+
-+# zip-security is actually a bundle, but for now it needs to be considered
-+# an image until this can be cleaned up properly.
-+product-images: zip-security
- 
- # The module summary cannot be run when:
- # * Cross compiling and building a partial BUILDJDK for the build host
-@@ -818,11 +815,21 @@
+@@ -815,11 +815,21 @@
  docs-image: docs-javadoc docs-jvmtidoc
  
  # This target builds the test image
@@ -483,7 +168,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  # all-bundles packages all our deliverables as tar.gz bundles.
  all-bundles: product-bundles test-bundles docs-bundles
-@@ -844,6 +851,8 @@
+@@ -841,6 +851,8 @@
  docs: docs-image
  bundles: all-bundles
  all: all-images
@@ -492,86 +177,6 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  ALL_TARGETS += default jdk images docs bundles all
  
-diff --git a/make/common/MakeBase.gmk b/make/common/MakeBase.gmk
---- a/make/common/MakeBase.gmk
-+++ b/make/common/MakeBase.gmk
-@@ -535,6 +535,67 @@
- endif
- 
- ################################################################################
-+# Take two paths and return the path of the last common directory.
-+# Ex: /foo/bar/baz, /foo/bar/banan -> /foo/bar
-+#     foo/bar/baz, /foo/bar -> <empty>
-+#
-+# The x prefix is used to preserve the presence of the initial slash
-+#
-+# $1 - Path to compare
-+# $2 - Other path to compare
-+FindCommonPathPrefix = \
-+    $(patsubst x%,%,$(subst $(SPACE),/,$(strip \
-+        $(call FindCommonPathPrefixHelper, \
-+            $(subst /,$(SPACE),x$(strip $1)), $(subst /,$(SPACE),x$(strip $2))) \
-+    )))
-+
-+FindCommonPathPrefixHelper = \
-+    $(if $(call equals, $(firstword $1), $(firstword $2)), \
-+      $(firstword $1) \
-+      $(call FindCommonPathPrefixHelper, \
-+          $(wordlist 2, $(words $1), $1), $(wordlist 2, $(words $2), $2) \
-+      ) \
-+    )
-+
-+# Convert a partial path into as many directory levels of ../, removing
-+# leading and following /.
-+# Ex: foo/bar/baz/ -> ../../..
-+#     foo/bar -> ../..
-+#     /foo -> ..
-+DirToDotDot = \
-+    $(subst $(SPACE),/,$(foreach d, $(subst /,$(SPACE),$1),..))
-+
-+# Computes the relative path from a directory to a file
-+# $1 - File to compute the relative path to
-+# $2 - Directory to compute the relative path from
-+RelativePath = \
-+    $(eval $1_prefix := $(call FindCommonPathPrefix, $1, $2)) \
-+    $(eval $1_dotdots := $(call DirToDotDot, $(patsubst $($(strip $1)_prefix)/%, %, $2))) \
-+    $(eval $1_suffix := $(patsubst $($(strip $1)_prefix)/%, %, $1)) \
-+    $($(strip $1)_dotdots)/$($(strip $1)_suffix)
-+
-+################################################################################
-+# link-file-* works similarly to install file but creates a symlink instead on
-+# platforms that support it. There are two versions, either creating a relative
-+# or an absolute link.
-+ifeq ($(OPENJDK_BUILD_OS), windows)
-+  link-file-absolute = $(install-file)
-+  link-file-relative = $(install-file)
-+else
-+  define link-file-relative
-+	$(call MakeDir, $(@D))
-+	$(RM) $@
-+	$(LN) -s $(call RelativePath, $<, $(@D)) $@
-+  endef
-+
-+  define link-file-absolute
-+	$(call MakeDir, $(@D))
-+	$(RM) $@
-+	$(LN) -s $< $@
-+  endef
-+endif
-+
-+################################################################################
- # Filter out duplicate sub strings while preserving order. Keeps the first occurance.
- uniq = \
-     $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
-@@ -698,7 +759,7 @@
-   # Remove any trailing slash from SRC and DEST
-   $1_SRC := $$(patsubst %/,%,$$($1_SRC))
-   $1_DEST := $$(patsubst %/,%,$$($1_DEST))
--
-+  
-   $$(foreach f, $$(patsubst $$($1_SRC)/%,%,$$($1_FILES)), \
-       $$(eval $$(call AddFileToCopy, $$($1_SRC)/$$f, \
-       $$($1_DEST)/$$(call $$(strip $$($1_NAME_MACRO)),$$(if $$($1_FLATTEN),$$(notdir $$f),$$f)), \
 diff --git a/make/common/Modules.gmk b/make/common/Modules.gmk
 --- a/make/common/Modules.gmk
 +++ b/make/common/Modules.gmk
@@ -586,13 +191,6 @@ diff --git a/make/common/Modules.gmk b/make/common/Modules.gmk
 diff --git a/make/common/SetupJavaCompilers.gmk b/make/common/SetupJavaCompilers.gmk
 --- a/make/common/SetupJavaCompilers.gmk
 +++ b/make/common/SetupJavaCompilers.gmk
-@@ -1,5 +1,5 @@
- #
--# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
-+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
- # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- #
- # This code is free software; you can redistribute it and/or modify it
 @@ -32,7 +32,7 @@
  
  # If warnings needs to be non-fatal for testing purposes use a command like:
