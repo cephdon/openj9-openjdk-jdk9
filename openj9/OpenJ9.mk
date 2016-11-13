@@ -261,6 +261,7 @@ J9_LIST := java.base jdk.attach java.logging java.management
 J9_SPECIFIC := com.ibm.management com.ibm.dtfj com.ibm.dtfjview
 BUILD_JDK_COPY:=$(OUTPUT_ROOT)/jdk_copy
 BUILD_JDK_ORIG:=$(OUTPUT_ROOT)/jdk_orig
+OPENJ9_IMAGE_DIR:=jdk
 
 merge_module:
 	$(eval $(shell rm -rf $(BUILD_JDK_COPY)))
@@ -281,10 +282,6 @@ create-jmod: prepare-jmod
 	$(foreach module, $(MODULE_LIST), $(call create-jmod-ant) $(\n))
 
 compose:
-	rm -rf $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)
-	cp -R $(IMAGES_OUTPUTDIR)/jdk $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)
-	cp $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/modules $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/modules.org
-	cp $(IMAGES_OUTPUTDIR)/jdk/lib/modules $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
 	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/
 	$(SED) -i -e 's/shape=sun/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
 	$(SED) -i -e 's/version=1.7/version=1.9/g' $(OUTPUT_ROOT)/vm/classlib.properties

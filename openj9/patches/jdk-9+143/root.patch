@@ -123,6 +123,18 @@ diff --git a/make/CreateJmods.gmk b/make/CreateJmods.gmk
  endif
  
  # TODO: What about headers?
+diff --git a/make/Images.gmk b/make/Images.gmk
+--- a/make/Images.gmk
++++ b/make/Images.gmk
+@@ -41,6 +41,8 @@
+ # All modules for the current target platform.
+ ALL_MODULES := $(call FindAllModules)
+ 
++ALL_MODULES += com.ibm.management com.ibm.dtfj com.ibm.dtfjview
++
+ $(eval $(call ReadImportMetaData))
+ 
+ JRE_MODULES += $(filter $(ALL_MODULES), $(BOOT_MODULES) \
 diff --git a/make/InterimImage.gmk b/make/InterimImage.gmk
 --- a/make/InterimImage.gmk
 +++ b/make/InterimImage.gmk
@@ -169,6 +181,15 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  ################################################################################
  # Build hotspot target
  
+@@ -268,7 +283,7 @@
+ ################################################################################
+ # Jmod targets
+ 
+-JMOD_MODULES := $(ALL_MODULES)
++JMOD_MODULES := $(ALL_MODULES) com.ibm.management com.ibm.dtfj com.ibm.dtfjview
+ JMOD_TARGETS := $(addsuffix -jmod, $(JMOD_MODULES))
+ 
+ define DeclareJmodRecipe
 @@ -349,7 +364,7 @@
  docs-zip:
  	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f Javadoc.gmk docs-zip)
