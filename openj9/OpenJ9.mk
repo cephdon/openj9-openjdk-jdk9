@@ -89,6 +89,30 @@ define setup.jmod
 		,mkdir -p /tmp/jcl_workdir/$(module)_extracted/classes/ )
 endef
 
+define recompilation
+	$(BOOT_JDK)/bin/javap -c -p $(BUILD_JDK_COPY)/modules/$(module)/module-info.class > $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp
+	sed -i -e 's/\$$/\./g' $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp
+	tail -n +2 $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp > $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
+	$(BUILD_JAVAC) -source 9 -target 9 -encoding ascii -d $(BUILD_JDK_COPY)/modules --module-source-path $(BUILD_JDK_COPY)/modules --module-path $(BUILD_JDK_COPY)/modules --system none $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
+endef
+
+define copy-ibm-specific
+	rm -rf $(BUILD_JDK_COPY)/modules/$(module)
+	mkdir -p $(BUILD_JDK_COPY)/modules/$(module)
+	cp -rf $(OUTPUT_ROOT)/j9classes/$(module)/* $(BUILD_JDK_COPY)/modules/$(module)/.
+	$(BUILD_JAVAC) -source 9 -target 9 -encoding ascii -d $(BUILD_JDK_COPY)/modules --module-source-path $(BUILD_JDK_COPY)/modules --module-path $(BUILD_JDK_COPY)/modules --system none $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
+endef
+
+define merge-module-info
+	cp -rf $(OUTPUT_ROOT)/j9classes/$(module)/* $(BUILD_JDK_COPY)/modules/$(module)/.
+	mv $(BUILD_JDK_COPY)/modules/$(module)/module-info.java $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.j9
+	$(BOOT_JDK)/bin/javap -c -p $(BUILD_JDK_COPY)/modules/$(module)/module-info.class > $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp
+	sed -i -e 's/\$$/\./g' $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp
+	tail -n +2 $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp > $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.oracle
+	$(BUILD_JAVA) -cp $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/build.tools/ com.ibm.moduletools.ModuleInfoMerger $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.oracle $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.j9 $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
+	$(BUILD_JAVAC) -source 9 -target 9 -encoding ascii -d $(BUILD_JDK_COPY)/modules --module-source-path $(BUILD_JDK_COPY)/modules --module-path $(BUILD_JDK_COPY)/modules --system none $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
+endef
+
 define prepare-jmod-ant
 	ant -f $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/build_jvmbuilds.xml prepare-jmod -Dproduct=java9 -Dbranch=90 -Dplatform=xa64 -Dbuild.date=000000 -DBUILD_ID=000000 -Dendian=le -Dmodule.name=$(module) -Dj9jcl.module.info=/tmp/jcl_workdir/j9jcl/$(module) -Dwork.dir=/tmp/jcl_workdir -Dsdk.dir=/tmp/jcl_workdir/raw -Dbuild.tools.dir=$(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/build.tools -Djvm.build.dir=$(OPENJ9VM_SRC_DIR) -Dj9jcl.work.dir=/tmp/jcl_workdir/j9jcl -Djava9.sdk=$(ORACLE_BOOT_JDK) -Djavac.opt.module.path=--module-path -Djavac.opt.module.source.path=--module-source-path -Djavac.opt.system=--system -Djlink.opt.add.modules=--add-modules -Djlink.opt.module.path=--module-path -Drawbuild.level=$(JDK_BUILD)
 endef
@@ -109,9 +133,9 @@ override MAKEFLAGS := -j $(NUMCPU)
 
 OPENJ9_IMAGE_DIR := sdk
 
-.PHONY: clean-j9 clean-j9-dist compose-j9 create-jmod prepare-jmod setup-j9jcl compile-j9 stage-j9 openj9 run-preprocessors-j9 
+.PHONY: clean-j9 clean-j9-dist compose-j9 create-jmod prepare-jmod setup-j9jcl compile-j9 stage-j9 openj9 run-preprocessors-j9 build-j9 setup-j9jcl-pre-jcl merge_module compose
 .NOTPARALLEL:
-openj9: stage-j9 run-preprocessors-j9 compile-j9 setup-j9jcl prepare-jmod create-jmod compose-j9
+build-j9: stage-j9 run-preprocessors-j9 compile-j9 setup-j9jcl-pre-jcl
 
 stage-j9:
 	@echo "---------------- Staging OpenJ9 components in $(OUTPUT_ROOT)/vm ------------------"
@@ -169,8 +193,8 @@ run-preprocessors-j9: stage-j9
 	@echo "---------------- Running OpenJ9 preprocessors ------------------------"
 	cd $(OUTPUT_ROOT)/vm
 	$(BOOT_JDK)/bin/javac "$(OUTPUT_ROOT)/vm/J9 JCL Build Tools/src/com/ibm/moduletools/ModuleInfoMerger.java" -d $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/build.tools
-	(cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=linux_x86-64 JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" tools)
-	(cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=linux_x86-64 JAVA_HOME=$(BOOT_JDK) BUILD_ID=$(shell date +'%N') ddr)
+	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=linux_x86-64 JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" tools)
+	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=linux_x86-64 JAVA_HOME=$(BOOT_JDK) BUILD_ID=$(shell date +'%N') ddr)
 	$(eval J9VM_SHA=$(shell git -C $(OPENJ9VM_SRC_DIR) rev-parse --short HEAD))
 	@sed -i -e 's/developer.compile/$(J9VM_SHA)/g' $(OUTPUT_ROOT)/vm/include/j9version.h
 	@echo J9VM version string set to : $(J9VM_SHA)
@@ -178,6 +202,7 @@ run-preprocessors-j9: stage-j9
 	sed -i -e 's/O3 -fno-strict-aliasing/O0 -Wno-format -Wno-unused-result -fno-strict-aliasing -fno-stack-protector/g' $(OUTPUT_ROOT)/vm/makelib/targets.mk
 	# generate RAS binaries - PROBLEM: need to fix these to work with new sdk release
 	sed -i -e 's/1.5\"/1.8\"/g' $(OUTPUT_ROOT)/vm/RAS_Binaries/build.xml
+	ant -lib $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/om.jar -f $(OUTPUT_ROOT)/vm/RAS_Binaries/build.xml -Djavabin_java8=$(BOOT_JDK8)/bin -Djavabin_java9=$(BOOT_JDK)/bin -Djar.dir=$(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/ -Dwith-boot-jdk=$(BOOT_JDK)
 	(cd "$(OUTPUT_ROOT)/vm/J9 JCL/" && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.8 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
 	(cd "$(OUTPUT_ROOT)/vm/J9 JCL/" && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.9 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
 	$(MAKE) $(MAKEFLAGS) -f "$(OUTPUT_ROOT)/vm/JCL Ant Build/jcl_build.mk" SPEC_LEVEL=1.9 JPP_CONFIG=SIDECAR19_MODULAR-SE_B136 BUILD_ID=$(shell date +'%N') COMPILER_BCP=sun190B136 JPP_DIRNAME=jclSC19ModularB136 JAVA_BIN=$(BOOT_JDK)/bin/ BUILD_ROOT=$(OUTPUT_ROOT)/vm NVCC=/usr/local/cuda-5.5/bin/nvcc WORKSPACE=$(OUTPUT_ROOT)/vm 
@@ -189,7 +214,37 @@ compile-j9: run-preprocessors-j9
 	(cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) all)
 	@echo "--------------------- Finished compiling OpenJ9 ------------------------"
 
-setup-j9jcl: run-preprocessors-j9
+setup-j9jcl-pre-jcl: 
+	@echo "----------------------Extract vm.jar and jcl-4-raw.jar ------------"
+	rm -rf $(OUTPUT_ROOT)/j9classes
+	mkdir -p $(OUTPUT_ROOT)/j9classes
+	unzip -qo "$(OUTPUT_ROOT)/vm/J9 JCL/cuda4j_j9_modular.jar" -d $(OUTPUT_ROOT)/j9classes
+	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC19ModularB136/classes-vm.zip -d $(OUTPUT_ROOT)/j9classes
+	unzip -qo $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jcl-4-raw.jar -d $(OUTPUT_ROOT)/j9classes/java.base
+	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC190-DAA/classes-vm.zip -d $(OUTPUT_ROOT)/j9classes/java.base/ "com/ibm/dataaccess/*"
+	unzip -qo $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/java9_dtfj-interface.jar -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj
+	unzip -qo $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/java9_dtfj.jar -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj
+	cp "$(OUTPUT_ROOT)/vm/J9 JCL/src/com.ibm.dtfj/module-info.java" $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/
+	rm -rf $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/META-INF
+	unzip -qo $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/java9_dtfjview.jar -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview
+	cp "$(OUTPUT_ROOT)/vm/J9 JCL/src/com.ibm.dtfjview/module-info.java" $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview/
+	rm -rf $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview/META-INF
+	rm -rf $(OUTPUT_ROOT)/j9classes/META-INF
+	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(OUTPUT_ROOT)/jdk/lib/amd64/
+	$(SED) -i -e 's/shape=sun/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
+	$(SED) -i -e 's/version=1.7/version=1.9/g' $(OUTPUT_ROOT)/vm/classlib.properties
+	$(MKDIR) -p $(OUTPUT_ROOT)/jdk/lib/amd64/compressedrefs/
+	cp -R $(OUTPUT_ROOT)/vm/*.so $(OUTPUT_ROOT)/jdk/lib/amd64/compressedrefs/
+	cp $(OUTPUT_ROOT)/vm/J9TraceFormat.dat $(OUTPUT_ROOT)/jdk/lib/
+	cp $(OUTPUT_ROOT)/vm/OMRTraceFormat.dat $(OUTPUT_ROOT)/jdk/lib/
+	cp -R $(OUTPUT_ROOT)/vm/options.default $(OUTPUT_ROOT)/jdk/lib/
+	cp -R $(OUTPUT_ROOT)/vm/java*properties $(OUTPUT_ROOT)/jdk/lib/
+	mkdir -p $(OUTPUT_ROOT)/jdk/lib/amd64/j9vm
+	cp $(OUTPUT_ROOT)/vm/redirector/libjvm.so $(OUTPUT_ROOT)/jdk/lib/amd64/j9vm
+	cp $(OUTPUT_ROOT)/vm/classlib.properties  $(OUTPUT_ROOT)/jdk/lib
+	cp $(OUTPUT_ROOT)/vm/classlib.properties $(OUTPUT_ROOT)/jdk/lib/amd64/compressedrefs
+
+setup-j9jcl:
 	@echo "---------- Building OpenJ9 image in $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR) -----------"
 	rm -rf /tmp/jcl_workdir
 	mkdir -p /tmp/jcl_workdir/
@@ -202,9 +257,21 @@ setup-j9jcl: run-preprocessors-j9
 	unzip -qo $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jcl-4-raw.jar -d /tmp/jcl_workdir/j9jcl/java.base/
 	rm -rf /tmp/jcl_workdir/j9jcl/META-INF
 
-J9_LIST := java.base jdk.attach java.logging java.management com.ibm.management
+J9_LIST := java.base jdk.attach java.logging java.management
+J9_SPECIFIC := com.ibm.management com.ibm.dtfj com.ibm.dtfjview
+BUILD_JDK_COPY:=$(OUTPUT_ROOT)/jdk_copy
+BUILD_JDK_ORIG:=$(OUTPUT_ROOT)/jdk_orig
+OPENJ9_IMAGE_DIR:=jdk
 
-prepare-jmod: setup-j9jcl compile-j9
+merge_module:
+	$(eval $(shell rm -rf $(BUILD_JDK_COPY)))
+	$(eval $(shell cp -rf $(BUILD_JDK) $(BUILD_JDK_COPY)))
+	$(eval override MODULE_LIST = $(filter-out $(J9_SPECIFIC), $(filter-out $(J9_LIST),$(shell find $(BUILD_JDK_COPY)/modules/ -maxdepth 1 -type d -exec basename '{}' \; | tail -n +2 | tr '\n' ' '))))
+	$(foreach module, $(J9_SPECIFIC), $(call copy-ibm-specific) $(\n))
+	$(foreach module, $(J9_LIST), $(call merge-module-info) $(\n))
+	$(foreach module, $(MODULE_LIST), $(call recompilation) $(\n))
+
+prepare-jmod: setup-j9jcl
 	$(eval override MODULE_LIST = $(filter-out $(J9_LIST),$(shell find /tmp/jcl_workdir/raw/jmods  -name "*.jmod" -exec basename '{}' .jmod \; | tr '\n' ' ')))
 	$(foreach module, $(J9_LIST), $(call prepare-jmod-ant) $(\n))
 	$(foreach module, $(MODULE_LIST), $(call prepare-jmod-ant2) $(\n))
@@ -213,6 +280,21 @@ create-jmod: prepare-jmod
 	$(eval override MODULE_LIST = $(filter-out $(J9_LIST),$(shell find /tmp/jcl_workdir/raw/jmods  -name "*.jmod" -exec basename '{}' .jmod \; | tr '\n' ' ')))
 	$(foreach module, $(J9_LIST), $(call create-jmod-ant) $(\n))
 	$(foreach module, $(MODULE_LIST), $(call create-jmod-ant) $(\n))
+
+compose:
+	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/
+	$(SED) -i -e 's/shape=sun/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
+	$(SED) -i -e 's/version=1.7/version=1.9/g' $(OUTPUT_ROOT)/vm/classlib.properties
+	$(MKDIR) -p $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/
+	cp -R $(OUTPUT_ROOT)/vm/*.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/
+	cp $(OUTPUT_ROOT)/vm/J9TraceFormat.dat $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
+	cp $(OUTPUT_ROOT)/vm/OMRTraceFormat.dat $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
+	cp -R $(OUTPUT_ROOT)/vm/options.default $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
+	cp -R $(OUTPUT_ROOT)/vm/java*properties $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
+	mkdir -p $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/j9vm
+	cp $(OUTPUT_ROOT)/vm/redirector/libjvm.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/j9vm
+	cp $(OUTPUT_ROOT)/vm/classlib.properties  $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib
+	cp $(OUTPUT_ROOT)/vm/classlib.properties $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs
 
 compose-j9: create-jmod 
 	$(eval override MODULE_LIST = $(shell find /tmp/jcl_workdir/raw/jmods -name "*.jmod" -exec basename '{}' .jmod \; | tr '\n' ','))

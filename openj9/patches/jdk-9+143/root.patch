@@ -17,8 +17,8 @@ diff --git a/common/autoconf/boot-jdk.m4 b/common/autoconf/boot-jdk.m4
  
 -  JMOD="$BUILD_JDK/bin/jmod"
 -  JLINK="$BUILD_JDK/bin/jlink"
-+  JMOD="$ORACLE_BOOT_JDK/bin/jmod"
-+  JLINK="$ORACLE_BOOT_JDK/bin/jlink"
++  JMOD="$BUILD_JDK/bin/jmod -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base -J-Djava.lang.invoke.stringConcat=BC_SB"
++  JLINK="$BUILD_JDK/bin/jlink -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base -J-Djava.lang.invoke.stringConcat=BC_SB"
    AC_SUBST(JMOD)
    AC_SUBST(JLINK)
  
@@ -70,7 +70,19 @@ diff --git a/common/autoconf/source-dirs.m4 b/common/autoconf/source-dirs.m4
 diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
 --- a/common/autoconf/spec.gmk.in
 +++ b/common/autoconf/spec.gmk.in
-@@ -580,7 +580,7 @@
+@@ -570,8 +570,10 @@
+ JAVAC_FLAGS?=@JAVAC_FLAGS@
+ 
+ 
+-BUILD_JAVA_FLAGS := @BOOTCYCLE_JVM_ARGS_BIG@
++BUILD_JAVA_FLAGS := @BOOTCYCLE_JVM_ARGS_BIG@ --patch-module java.base=@FIXPATH@$(BUILD_JDK)/../j9classes/java.base -Djava.lang.invoke.stringConcat=BC_SB
++BUILDJAVA_FLAGS_JAVAC := -J--patch-module -Jjava.base=@FIXPATH@$(BUILD_JDK)/../j9classes/java.base -J-Djava.lang.invoke.stringConcat=BC_SB
+ BUILD_JAVA=@FIXPATH@ $(BUILD_JDK)/bin/java $(BUILD_JAVA_FLAGS)
++BUILD_JAVAC=@FIXPATH@ $(BUILD_JDK)/bin/javac $(BUILDJAVA_FLAGS_JAVAC)
+ 
+ # Use ?= as this can be overridden from bootcycle-spec.gmk
+ BOOT_JDK_MODULAR ?= @BOOT_JDK_MODULAR@
+@@ -580,7 +582,7 @@
      jdk.jdeps jdk.javadoc jdk.rmic
  ifeq ($(BOOT_JDK_MODULAR), true)
    INTERIM_OVERRIDE_MODULES_ARGS = $(foreach m, $(INTERIM_OVERRIDE_MODULES), \
@@ -79,7 +91,7 @@ diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
    INTERIM_LANGTOOLS_ARGS = $(INTERIM_OVERRIDE_MODULES_ARGS)
    JAVAC_MAIN_CLASS = -m jdk.compiler/com.sun.tools.javac.Main
    JAVADOC_MAIN_CLASS = -m jdk.javadoc/jdk.javadoc.internal.tool.Main
-@@ -608,6 +608,10 @@
+@@ -608,6 +610,10 @@
    RC_FLAGS:=@RC_FLAGS@
  endif
  
@@ -90,6 +102,39 @@ diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
  # Tools adhering to a minimal and common standard of posix compliance.
  AWK:=@AWK@
  BASENAME:=@BASENAME@
+diff --git a/make/CreateJmods.gmk b/make/CreateJmods.gmk
+--- a/make/CreateJmods.gmk
++++ b/make/CreateJmods.gmk
+@@ -43,7 +43,7 @@
+     $(SUPPORT_OUTPUTDIR)/modules_cmds $(IMPORT_MODULES_CMDS))))
+ CONF_DIR := $(firstword $(wildcard $(addsuffix /$(MODULE), \
+     $(SUPPORT_OUTPUTDIR)/modules_conf $(IMPORT_MODULES_CONF))))
+-CLASSES_DIR := $(wildcard $(JDK_OUTPUTDIR)/modules/$(MODULE))
++CLASSES_DIR := $(wildcard $(JDK_OUTPUTDIR)/../jdk_copy/modules/$(MODULE))
+ INCLUDE_HEADERS_DIR := $(firstword $(wildcard $(addsuffix /$(MODULE), \
+     $(SUPPORT_OUTPUTDIR)/modules_include $(IMPORT_MODULES_INCLUDE_HEADERS))))
+ MAN_DIR := $(firstword $(wildcard $(addsuffix /$(MODULE), \
+@@ -99,7 +99,7 @@
+ # the actual command. Filter that out using wildcard before adding to DEPS.
+ DEPS += $(wildcard $(JMOD_CMD))
+ ifeq ($(EXTERNAL_BUILDJDK), false)
+-  DEPS += $(call CacheFind, $(JDK_OUTPUTDIR)/modules/jdk.jlink/jdk/tools/jmod)
++  DEPS += $(call CacheFind, $(JDK_OUTPUTDIR)/../jdk_copy/modules/jdk.jlink/jdk/tools/jmod)
+ endif
+ 
+ # TODO: What about headers?
+diff --git a/make/Images.gmk b/make/Images.gmk
+--- a/make/Images.gmk
++++ b/make/Images.gmk
+@@ -41,6 +41,8 @@
+ # All modules for the current target platform.
+ ALL_MODULES := $(call FindAllModules)
+ 
++ALL_MODULES += com.ibm.management com.ibm.dtfj com.ibm.dtfjview
++
+ $(eval $(call ReadImportMetaData))
+ 
+ JRE_MODULES += $(filter $(ALL_MODULES), $(BOOT_MODULES) \
 diff --git a/make/InterimImage.gmk b/make/InterimImage.gmk
 --- a/make/InterimImage.gmk
 +++ b/make/InterimImage.gmk
@@ -114,7 +159,38 @@ diff --git a/make/InterimImage.gmk b/make/InterimImage.gmk
 diff --git a/make/Main.gmk b/make/Main.gmk
 --- a/make/Main.gmk
 +++ b/make/Main.gmk
-@@ -349,7 +349,7 @@
+@@ -233,6 +233,21 @@
+ 
+ ALL_TARGETS += $(LAUNCHER_TARGETS)
+ 
++###############################################################################
++# OpenJ9 target compile j9 classes
++
++ifeq ($(BUILD_OPENJ9), true)
++j9vm-compose:
++	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk compose)
++
++j9vm-merge:
++	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk merge_module)
++
++j9vm-build:
++	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk build-j9)
++endif
++
++
+ ################################################################################
+ # Build hotspot target
+ 
+@@ -268,7 +283,7 @@
+ ################################################################################
+ # Jmod targets
+ 
+-JMOD_MODULES := $(ALL_MODULES)
++JMOD_MODULES := $(ALL_MODULES) com.ibm.management com.ibm.dtfj com.ibm.dtfjview
+ JMOD_TARGETS := $(addsuffix -jmod, $(JMOD_MODULES))
+ 
+ define DeclareJmodRecipe
+@@ -349,7 +364,7 @@
  docs-zip:
  	+($(CD) $(SRC_ROOT)/make && $(MAKE) $(MAKE_ARGS) -f Javadoc.gmk docs-zip)
  
@@ -123,7 +199,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  ################################################################################
  # Cross compilation support
-@@ -384,7 +384,7 @@
+@@ -384,7 +399,7 @@
  	+($(CD) $(JDK_TOPDIR)/make && $(MAKE) $(MAKE_ARGS) -f GenerateClasslist.gmk)
  endif
  
@@ -132,7 +208,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  ################################################################################
  # Build tests
-@@ -435,8 +435,8 @@
+@@ -435,8 +450,8 @@
  	     -f BuildFailureHandler.gmk images)
  endif
  
@@ -143,7 +219,64 @@ diff --git a/make/Main.gmk b/make/Main.gmk
      test-image-jdk-jtreg-native build-test-lib build-test-failure-handler \
      test-failure-handler test-image-failure-handler test-image-hotspot-gtest
  
-@@ -816,11 +816,21 @@
+@@ -632,16 +647,16 @@
+   ifeq ($(CREATE_BUILDJDK), true)
+     # Avoid calling create-buildjdk from within a create-buildjdk call.
+     ifneq ($(CREATING_BUILDJDK), true)
+-      $(JMOD_TARGETS): create-buildjdk
++      $(JMOD_TARGETS): j9vm-merge create-buildjdk
+       buildtools-modules: create-buildjdk
+     else
+       # While actually creating the buildjdk, the default deps applies.
+-      $(JMOD_TARGETS): $(DEFAULT_JMOD_DEPS)
++      $(JMOD_TARGETS): j9vm-merge $(DEFAULT_JMOD_DEPS)
+     endif
+   else
+     # The normal non cross compilation case uses the default deps.
+     # To avoid races with the optimize target, that also needs to happen first.
+-    $(JMOD_TARGETS): $(DEFAULT_JMOD_DEPS) exploded-image-optimize
++    $(JMOD_TARGETS): j9vm-merge $(DEFAULT_JMOD_DEPS) exploded-image-optimize
+   endif
+ 
+   zip-security: java.base-java java.security.jgss-java java.security.jgss-libs \
+@@ -677,7 +692,7 @@
+   # populated (java, copy and gendata targets) and the basic libs and launchers
+   # have been built.
+   exploded-image-optimize: java copy gendata java.base-libs java.base-launchers \
+-      buildtools-modules
++      buildtools-modules j9vm-build
+ 
+   bootcycle-images: jdk-image
+ 
+@@ -755,7 +770,9 @@
+ 
+ launchers: $(LAUNCHER_TARGETS)
+ 
+-jmods: $(JMOD_TARGETS)
++j9vm-merge: j9vm-build jdk.jlink-launchers exploded-image-optimize 
++
++jmods: j9vm-merge $(JMOD_TARGETS)
+ 
+ # Explicitly declare dependency for virtual target jdk.jdwp.agent-gensrc which
+ # is actually handled by jdk.jdi-gensrc
+@@ -783,6 +800,7 @@
+   exploded-image: exploded-image-optimize
+ endif
+ 
++j9vm-build: buildtools-langtools 
+ create-buildjdk: create-buildjdk-copy create-buildjdk-interim-image
+ 
+ mac-bundles: mac-bundles-jdk
+@@ -792,7 +810,7 @@
+ 
+ # This target builds the product images, e.g. the JRE and JDK image
+ # (and possibly other, more specific versions)
+-product-images: jdk-image jre-image symbols-image exploded-image
++product-images: j9vm-build jdk-image jre-image symbols-image exploded-image
+ 
+ # zip-security is actually a bundle, but for now it needs to be considered
+ # an image until this can be cleaned up properly.
+@@ -816,11 +834,14 @@
  docs-image: docs-javadoc docs-copy
  
  # This target builds the test image
@@ -151,40 +284,34 @@ diff --git a/make/Main.gmk b/make/Main.gmk
 -    test-image-jdk-jtreg-native test-image-failure-handler test-image-hotspot-gtest
 +test-image: prepare-test-image \
 +    test-image-jdk-jtreg-native test-image-failure-handler
-+
-+################################################################################
-+# OpenJ9 target
-+
-+BUILD_OPENJ9_IMAGE :=
-+ifeq ($(BUILD_OPENJ9), true)
-+       BUILD_OPENJ9_IMAGE = ($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk)
-+endif
-+
-+################################################################################
  
++################################################################################
++
++j9vm-compose: all-images
  # all-images builds all our deliverables as images.
 -all-images: product-images test-image docs-image
 +all-images: product-images test-image
  
  # all-bundles packages all our deliverables as tar.gz bundles.
  all-bundles: product-bundles test-bundles docs-bundles
-@@ -842,6 +852,8 @@
+@@ -841,7 +862,7 @@
+ images: product-images
  docs: docs-image
  bundles: all-bundles
- all: all-images
-+	@echo Finished building OpenJDK
-+	$(BUILD_OPENJ9_IMAGE)
+-all: all-images
++all: all-images j9vm-compose
  
  ALL_TARGETS += default jdk images docs bundles all
  
 diff --git a/make/common/Modules.gmk b/make/common/Modules.gmk
 --- a/make/common/Modules.gmk
 +++ b/make/common/Modules.gmk
-@@ -62,7 +62,6 @@
+@@ -62,7 +62,7 @@
      jdk.net \
      jdk.sctp \
      jdk.unsupported \
 -    jdk.vm.ci \
++    com.ibm.management \
      #
  
  # to be deprivileged
