@@ -1,0 +1,140 @@
+diff --git a/make/Tools.gmk b/make/Tools.gmk
+--- a/make/Tools.gmk
++++ b/make/Tools.gmk
+@@ -38,7 +38,7 @@
+ ################################################################################
+ 
+ ifeq ($(BOOT_JDK_MODULAR), true)
+-  COMPILEFONTCONFIG_ADD_EXPORTS := --add-exports java.desktop/sun.awt=ALL-UNNAMED
++  COMPILEFONTCONFIG_ADD_EXPORTS := -XaddExports:java.desktop/sun.awt=ALL-UNNAMED
+ endif
+ 
+ TOOL_COMPILEFONTCONFIG = $(JAVA_SMALL) -cp $(BUILDTOOLS_OUTPUTDIR)/jdk_tools_classes \
+@@ -94,7 +94,7 @@
+ # Nimbus is used somewhere in the swing build.
+ 
+ ifeq ($(BOOT_JDK_MODULAR), true)
+-  COMPILENIMBUS_ADD_MODS := --add-modules java.xml.bind
++  COMPILENIMBUS_ADD_MODS := -addmods java.xml.bind
+ endif
+ 
+ TOOL_GENERATENIMBUS = $(JAVA_SMALL) -cp $(BUILDTOOLS_OUTPUTDIR)/jdk_tools_classes \
+diff --git a/make/copy/Copy-java.base.gmk b/make/copy/Copy-java.base.gmk
+--- a/make/copy/Copy-java.base.gmk
++++ b/make/copy/Copy-java.base.gmk
+@@ -36,6 +36,7 @@
+     $(INCLUDE_DST_DIR)/jvmticmlr.h \
+     $(INCLUDE_DST_DIR)/classfile_constants.h \
+     $(INCLUDE_DST_OS_DIR)/jni_md.h \
++    $(INCLUDE_DST_DIR)/jvmti.h \
+     #
+ 
+ $(INCLUDE_DST_DIR)/%.h: $(JDK_TOPDIR)/src/java.base/share/native/include/%.h
+@@ -44,6 +45,8 @@
+ $(INCLUDE_DST_OS_DIR)/%.h: \
+     $(JDK_TOPDIR)/src/java.base/$(OPENJDK_TARGET_OS_EXPORT_DIR)/native/include/%.h
+ 	$(call install-file)
++$(INCLUDE_DST_DIR)/jvmti.h: $(SRC_ROOT)/j9vm/VM_Common/include/jvmti.h
++	$(call install-file)
+ 
+ ################################################################################
+ 
+diff --git a/make/gendata/GendataBlacklistedCerts.gmk b/make/gendata/GendataBlacklistedCerts.gmk
+--- a/make/gendata/GendataBlacklistedCerts.gmk
++++ b/make/gendata/GendataBlacklistedCerts.gmk
+@@ -33,4 +33,4 @@
+ 	$(call MakeDir, $(@D))
+ 	($(CAT) $(GENDATA_BLACKLISTED_CERTS_SRC) | $(TOOL_BLACKLISTED_CERTS) > $@) || exit 1
+ 
+-TARGETS += $(GENDATA_BLACKLISTED_CERTS)
++#TARGETS += $(GENDATA_BLACKLISTED_CERTS)
+diff --git a/make/gendata/GendataBreakIterator.gmk b/make/gendata/GendataBreakIterator.gmk
+--- a/make/gendata/GendataBreakIterator.gmk
++++ b/make/gendata/GendataBreakIterator.gmk
+@@ -62,11 +62,11 @@
+ 
+ ifeq ($(BOOT_JDK_MODULAR), true)
+   BREAK_ITERATOR_BOOTCLASSPATH := \
+-      --patch-module java.base=$(BREAK_ITERATOR_CLASSES)/java.base \
+-      --patch-module jdk.localedata=$(BREAK_ITERATOR_CLASSES)/jdk.localedata \
+-      --add-exports java.base/sun.text=ALL-UNNAMED \
+-      --add-exports java.base/sun.text.resources=ALL-UNNAMED \
+-      --add-exports jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
++      -Xpatch:java.base=$(BREAK_ITERATOR_CLASSES)/java.base
++      -Xpatch:jdk.localedata=$(BREAK_ITERATOR_CLASSES)/jdk.localedata \
++      -XaddExports:java.base/sun.text=ALL-UNNAMED,java.base/sun.text.resources=ALL-UNNAMED,jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
++      #--add-exports java.base/sun.text.resources=ALL-UNNAMED \
++      #--add-exports jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
+       #
+ else
+   BREAK_ITERATOR_BOOTCLASSPATH := -Xbootclasspath/p:$(call PathList, \
+diff --git a/src/java.base/share/classes/module-info.java b/src/java.base/share/classes/module-info.java
+--- a/src/java.base/share/classes/module-info.java
++++ b/src/java.base/share/classes/module-info.java
+@@ -133,8 +133,7 @@
+     exports jdk.internal.org.objectweb.asm to
+         jdk.jartool,
+         jdk.jlink,
+-        jdk.scripting.nashorn,
+-        jdk.vm.ci;
++        jdk.scripting.nashorn;
+     exports jdk.internal.org.objectweb.asm.tree to
+         jdk.jlink;
+     exports jdk.internal.org.objectweb.asm.util to
+@@ -175,8 +174,7 @@
+         jdk.net,
+         jdk.scripting.nashorn,
+         jdk.scripting.nashorn.shell,
+-        jdk.unsupported,
+-        jdk.vm.ci;
++        jdk.unsupported;
+     exports jdk.internal.perf to
+         java.desktop,
+         java.management,
+@@ -192,8 +190,7 @@
+         jdk.scripting.nashorn,
+         jdk.unsupported;
+     exports jdk.internal.vm.annotation to
+-        jdk.unsupported,
+-        jdk.vm.ci;
++        jdk.unsupported;
+     exports jdk.internal.util.jar to
+         jdk.jartool,
+         jdk.jdeps,
+diff --git a/src/java.base/unix/conf/amd64/jvm.cfg b/src/java.base/unix/conf/amd64/jvm.cfg
+--- a/src/java.base/unix/conf/amd64/jvm.cfg
++++ b/src/java.base/unix/conf/amd64/jvm.cfg
+@@ -30,5 +30,8 @@
+ # "-XXaltjvm=<jvm_dir>" option, but that too is unsupported
+ # and may not be available in a future release.
+ #
+--server KNOWN
+--client IGNORE
++-j9vm KNOWN
++-hotspot IGNORE
++-classic IGNORE
++-native IGNORE
++-green IGNORE
+diff --git a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
+--- a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
++++ b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
+@@ -90,7 +90,7 @@
+ 
+     @Override
+     public Set<State> getState() {
+-        return EnumSet.of(State.AUTO_ENABLED, State.FUNCTIONAL);
++        return EnumSet.of(State.DISABLED, State.FUNCTIONAL);
+     }
+ 
+     @Override
+diff --git a/src/jdk.jlink/share/classes/module-info.java b/src/jdk.jlink/share/classes/module-info.java
+--- a/src/jdk.jlink/share/classes/module-info.java
++++ b/src/jdk.jlink/share/classes/module-info.java
+@@ -45,7 +45,6 @@
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.DefaultCompressPlugin;
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ExcludeVMPlugin;
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.IncludeLocalesPlugin;
+-    provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.GenerateJLIClassesPlugin;
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ReleaseInfoPlugin;
+     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ClassForNamePlugin;
+  }
