@@ -60,7 +60,7 @@ diff --git a/make/gendata/GendataBreakIterator.gmk b/make/gendata/GendataBreakIt
 -      --add-exports java.base/sun.text=ALL-UNNAMED \
 -      --add-exports java.base/sun.text.resources=ALL-UNNAMED \
 -      --add-exports jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
-+      -Xpatch:java.base=$(BREAK_ITERATOR_CLASSES)/java.base
++      -Xpatch:java.base=$(BREAK_ITERATOR_CLASSES)/java.base \
 +      -Xpatch:jdk.localedata=$(BREAK_ITERATOR_CLASSES)/jdk.localedata \
 +      -XaddExports:java.base/sun.text=ALL-UNNAMED,java.base/sun.text.resources=ALL-UNNAMED,jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
 +      #--add-exports java.base/sun.text.resources=ALL-UNNAMED \
