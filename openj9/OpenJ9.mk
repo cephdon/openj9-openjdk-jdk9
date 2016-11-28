@@ -90,27 +90,31 @@ define setup.jmod
 endef
 
 define recompilation
-	$(BOOT_JDK)/bin/javap -c -p $(BUILD_JDK_COPY)/modules/$(module)/module-info.class > $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp
-	sed -i -e 's/\$$/\./g' $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp
-	tail -n +2 $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp > $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
-	$(BUILD_JAVAC) -source 9 -target 9 -encoding ascii -d $(BUILD_JDK_COPY)/modules --module-source-path $(BUILD_JDK_COPY)/modules --module-path $(BUILD_JDK_COPY)/modules --system none $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
+	$(BUILD_JAVAP) -c -p $(BUILD_JDK)/modules/$(module)/module-info.class > $(BUILD_JDK)/modules/$(module)/module-info.java.temp
+	sed -i -e 's/\$$/\./g' $(BUILD_JDK)/modules/$(module)/module-info.java.temp
+	tail -n +2 $(BUILD_JDK)/modules/$(module)/module-info.java.temp > $(BUILD_JDK)/modules/$(module)/module-info.java
+	echo $(BUILD_JDK)/modules/$(module)/module-info.java >> $(BUILD_JDK)/../moduleinfo.list
 endef
 
 define copy-ibm-specific
-	rm -rf $(BUILD_JDK_COPY)/modules/$(module)
-	mkdir -p $(BUILD_JDK_COPY)/modules/$(module)
-	cp -rf $(OUTPUT_ROOT)/j9classes/$(module)/* $(BUILD_JDK_COPY)/modules/$(module)/.
-	$(BUILD_JAVAC) -source 9 -target 9 -encoding ascii -d $(BUILD_JDK_COPY)/modules --module-source-path $(BUILD_JDK_COPY)/modules --module-path $(BUILD_JDK_COPY)/modules --system none $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
+	rm -rf $(BUILD_JDK)/modules/$(module)
+	mkdir -p $(BUILD_JDK)/modules/$(module)
+	cp -rf $(OUTPUT_ROOT)/j9classes/$(module)/* $(BUILD_JDK)/modules/$(module)/.
+	echo $(BUILD_JDK)/modules/$(module)/module-info.java >> $(BUILD_JDK)/../moduleinfo.list
 endef
 
 define merge-module-info
-	cp -rf $(OUTPUT_ROOT)/j9classes/$(module)/* $(BUILD_JDK_COPY)/modules/$(module)/.
-	mv $(BUILD_JDK_COPY)/modules/$(module)/module-info.java $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.j9
-	$(BOOT_JDK)/bin/javap -c -p $(BUILD_JDK_COPY)/modules/$(module)/module-info.class > $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp
-	sed -i -e 's/\$$/\./g' $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp
-	tail -n +2 $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.temp > $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.oracle
-	$(BUILD_JAVA) -cp $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/build.tools/ com.ibm.moduletools.ModuleInfoMerger $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.oracle $(BUILD_JDK_COPY)/modules/$(module)/module-info.java.j9 $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
-	$(BUILD_JAVAC) -source 9 -target 9 -encoding ascii -d $(BUILD_JDK_COPY)/modules --module-source-path $(BUILD_JDK_COPY)/modules --module-path $(BUILD_JDK_COPY)/modules --system none $(BUILD_JDK_COPY)/modules/$(module)/module-info.java
+	cp -rf $(OUTPUT_ROOT)/j9classes/$(module)/* $(BUILD_JDK)/modules/$(module)/.
+	mv $(BUILD_JDK)/modules/$(module)/module-info.java $(BUILD_JDK)/modules/$(module)/module-info.java.j9
+	$(BUILD_JAVAP) -c -p $(BUILD_JDK)/modules/$(module)/module-info.class > $(BUILD_JDK)/modules/$(module)/module-info.java.temp
+	sed -i -e 's/\$$/\./g' $(BUILD_JDK)/modules/$(module)/module-info.java.temp
+	tail -n +2 $(BUILD_JDK)/modules/$(module)/module-info.java.temp > $(BUILD_JDK)/modules/$(module)/module-info.java.oracle
+	$(BUILD_JAVA) -cp $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/build.tools/ com.ibm.moduletools.ModuleInfoMerger $(BUILD_JDK)/modules/$(module)/module-info.java.oracle $(BUILD_JDK)/modules/$(module)/module-info.java.j9 $(BUILD_JDK)/modules/$(module)/module-info.java
+	echo $(BUILD_JDK)/modules/$(module)/module-info.java >> $(BUILD_JDK)/../moduleinfo.list
+endef
+
+define compile-module-info
+	$(BUILD_JAVAC) -source 9 -target 9 -encoding ascii -d $(BUILD_JDK)/modules --module-source-path $(BUILD_JDK)/modules --module-path $(BUILD_JDK)/modules --system none @$(BUILD_JDK)/../moduleinfo.list
 endef
 
 define prepare-jmod-ant
@@ -258,17 +262,15 @@ setup-j9jcl:
 
 J9_LIST := java.base jdk.attach java.logging java.management
 J9_SPECIFIC := com.ibm.management com.ibm.dtfj com.ibm.dtfjview
-BUILD_JDK_COPY:=$(OUTPUT_ROOT)/jdk_copy
-BUILD_JDK_ORIG:=$(OUTPUT_ROOT)/jdk_orig
 OPENJ9_IMAGE_DIR:=jdk
 
 merge_module:
-	$(eval $(shell rm -rf $(BUILD_JDK_COPY)))
-	$(eval $(shell cp -rf $(BUILD_JDK) $(BUILD_JDK_COPY)))
-	$(eval override MODULE_LIST = $(filter-out $(J9_SPECIFIC), $(filter-out $(J9_LIST),$(shell find $(BUILD_JDK_COPY)/modules/ -maxdepth 1 -type d -exec basename '{}' \; | tail -n +2 | tr '\n' ' '))))
+	$(eval $(shell rm -rf $(BUILD_JDK)/../moduleinfo.list))
+	$(eval override MODULE_LIST = $(filter-out $(J9_SPECIFIC), $(filter-out $(J9_LIST),$(shell find $(BUILD_JDK)/modules/ -maxdepth 1 -type d -exec basename '{}' \; | tail -n +2 | tr '\n' ' '))))
 	$(foreach module, $(J9_SPECIFIC), $(call copy-ibm-specific) $(\n))
 	$(foreach module, $(J9_LIST), $(call merge-module-info) $(\n))
 	$(foreach module, $(MODULE_LIST), $(call recompilation) $(\n))
+	$(call compile-module-info)
 
 prepare-jmod: setup-j9jcl
 	$(eval override MODULE_LIST = $(filter-out $(J9_LIST),$(shell find /tmp/jcl_workdir/raw/jmods  -name "*.jmod" -exec basename '{}' .jmod \; | tr '\n' ' ')))
