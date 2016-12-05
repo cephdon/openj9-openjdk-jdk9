@@ -16,9 +16,6 @@ usage() {
 	echo "	-tooling-repo		the OpenJ9/tooling repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/tooling.git"
 	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tooling.git"
 	echo "	-tooling-branch		the OpenJ9/tooling git branch: master "
-	echo "	-test-repo			the OpenJ9/test repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/test.git"
-	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/test.git"
-	echo "	-test-branch		the OpenJ9/test git branch: master "
 	echo "	-jit-repo			the OpenJ9/jit repository url: git002@gitlab-polyglot.hursley.ibm.com:jit/tr.open.git"
 	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git "
 	echo "	-jit-branch			the OpenJ9/jit git branch: java-master "
@@ -35,8 +32,8 @@ fi
 
 declare -A j9repos
 declare -A branches
-declare -A default_j9repos=( [j9vm]=j9/j9vm [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [j9test]=j9/test [tr.open]=jit/tr.open )
-declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master [tooling]=master [j9test]=master [tr.open]=java-master )
+declare -A default_j9repos=( [j9vm]=j9/j9vm [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [tr.open]=jit/tr.open )
+declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master [tooling]=master [tr.open]=java-master )
 
 
 ostype=`uname -s`
@@ -84,14 +81,6 @@ do
 		branches[tooling]="${i#*=}"
 		;;
 
-		-test-repo=* )
-		j9repos[test]="${i#*=}"
-		;;
-
-		-test-branch=* )
-		branches[test]="${i#*=}"
-		;;
-		
 		-jit-repo=* )
 		j9repos[jit]="${i#*=}"
 		;;
