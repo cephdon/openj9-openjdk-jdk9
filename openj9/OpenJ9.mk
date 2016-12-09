@@ -33,20 +33,6 @@ endif
 JDK_BUILD = $(shell echo $$(( $(ID) + 1 )))
 #$(info JDK_BUILD = $(JDK_BUILD))
 
-PRE_MOD_CFG := $(shell if test "$(JDK_BUILD)" -lt "113"; then echo 1; else echo 0; fi)
-#$(info PRE_MOD_CFG = $(PRE_MOD_CFG))
-
-ifeq ($(PRE_MOD_CFG), 1) # pre-modules version
- 	BOOT_MOD := bootmodules.jimage
-	BOOT_MOD_DIR := bootmodules
-	EXTRA_PATH := modules/
-else
-	BOOT_MOD := modules
-	BOOT_MOD_DIR := modules-dir
-	EXTRA_PATH := 
-endif
-#$(info BOOT_MOD = $(BOOT_MOD), BOOT_MOD_DIR = $(BOOT_MOD_DIR))
-
 OPENJ9VM_SRC_DIR := $(shell find $(SRC_ROOT) -maxdepth 1 -type d | grep j9vm)
 #$(info OPENJ9VM_SRC_DIR = $(OPENJ9VM_SRC_DIR))
 
@@ -107,7 +93,7 @@ NUMCPU := $(shell grep -c ^processor /proc/cpuinfo)
 
 override MAKEFLAGS := -j $(NUMCPU)
 
-.PHONY: clean-j9 clean-j9-dist compose-j9 create-jmod prepare-jmod setup-j9jcl compile-j9 stage-j9 openj9 run-preprocessors-j9 build-j9 setup-j9jcl-pre-jcl merge_module compose
+.PHONY: clean-j9 clean-j9-dist compose-j9 create-jmod prepare-jmod setup-j9jcl compile-j9 stage-j9 openj9 run-preprocessors-j9 build-j9 setup-j9jcl-pre-jcl merge_module compose compose-buildjvm unpack.vmjar dtfj dtfj.interface dtfjview
 .NOTPARALLEL:
 build-j9: stage-j9 run-preprocessors-j9 compile-j9 setup-j9jcl-pre-jcl
 
@@ -126,10 +112,6 @@ stage-j9:
 	rm -rf $(OUTPUT_ROOT)/vm/VM_Runtime-Tools
 	cp -r $(OPENJ9VM_SRC_DIR)/../tooling/VM_Build-Tools/* $(OUTPUT_ROOT)/vm
 	cp -r $(OPENJ9VM_SRC_DIR)/../tooling/VM_Build-Specifications/* $(OUTPUT_ROOT)/vm
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/recordio.jar $(OUTPUT_ROOT)/vm/DTFJ\ Core\ File\ Support/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/ibmjzos.jar $(OUTPUT_ROOT)/vm/DTFJ\ Core\ File\ Support/
-	mkdir $(OUTPUT_ROOT)/vm/DTFJ_Utils/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/asm-3.1.jar $(OUTPUT_ROOT)/vm/DTFJ_Utils/lib/
 	mkdir $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/dbghelp.dll $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/buildutils.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/buildutils.jar
@@ -159,8 +141,6 @@ stage-j9:
 	mkdir $(OUTPUT_ROOT)/vm/omr
 	cp -r $(OPENJ9OMR_SRC_DIR)/* $(OUTPUT_ROOT)/vm/omr/
 	echo "#define OMR_VERSION_STRING \"`git -C $(OPENJ9OMR_SRC_DIR) rev-parse --short HEAD`\"" > $(OUTPUT_ROOT)/vm/omr/OMR_VERSION_STRING
-	sed -i '/com.ibm.util.ant.CVSSync/d' $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/build_jvmbuilds.xml
-	sed -i -e 's/workspace\///g' $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/build_jvmbuilds.xml
 	@echo "---------------- Finished staging OpenJ9 ------------------------"
 
 run-preprocessors-j9: stage-j9
@@ -173,8 +153,6 @@ run-preprocessors-j9: stage-j9
 	@echo J9VM version string set to : $(J9VM_SHA)
 	sed -i -e 's/gcc-4.6/gcc/g' $(OUTPUT_ROOT)/vm/makelib/mkconstants.mk
 	sed -i -e 's/O3 -fno-strict-aliasing/O0 -Wno-format -Wno-unused-result -fno-strict-aliasing -fno-stack-protector/g' $(OUTPUT_ROOT)/vm/makelib/targets.mk
-	# generate RAS binaries - PROBLEM: need to fix these to work with new sdk release
-	(export JAVA_HOME=$(BOOT_JDK8) && ant -lib $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/om.jar -f $(OUTPUT_ROOT)/vm/RAS_Binaries/build.xml -Djavabin_java8=$(BOOT_JDK8)/bin -Djavabin_java9=$(BOOT_JDK)/bin -Djar.dir=$(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/ -Dwith-boot-jdk=$(BOOT_JDK))
 	(cd "$(OUTPUT_ROOT)/vm/J9 JCL/" && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.8 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
 	(cd "$(OUTPUT_ROOT)/vm/J9 JCL/" && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.9 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
 	$(MAKE) $(MAKEFLAGS) -f "$(OUTPUT_ROOT)/vm/JCL Ant Build/jcl_build.mk" SPEC_LEVEL=1.9 JPP_CONFIG=SIDECAR19_MODULAR-SE_B136 BUILD_ID=$(shell date +'%N') COMPILER_BCP=sun190B136 JPP_DIRNAME=jclSC19ModularB136 JAVA_BIN=$(BOOT_JDK)/bin/ BUILD_ROOT=$(OUTPUT_ROOT)/vm NVCC=/usr/local/cuda-5.5/bin/nvcc WORKSPACE=$(OUTPUT_ROOT)/vm 
@@ -186,7 +164,9 @@ compile-j9: run-preprocessors-j9
 	(cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) all)
 	@echo "--------------------- Finished compiling OpenJ9 ------------------------"
 
-setup-j9jcl-pre-jcl: 
+setup-j9jcl-pre-jcl: unpack.vmjar dtfj.interface dtfj dtfjview
+
+unpack.vmjar: 
 	@echo "----------------------Extract vm.jar and jcl-4-raw.jar ------------"
 	rm -rf $(OUTPUT_ROOT)/j9classes
 	mkdir -p $(OUTPUT_ROOT)/j9classes
@@ -194,14 +174,39 @@ setup-j9jcl-pre-jcl:
 	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC19ModularB136/classes-vm.zip -d $(OUTPUT_ROOT)/j9classes
 	unzip -qo $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jcl-4-raw.jar -d $(OUTPUT_ROOT)/j9classes/java.base
 	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC190-DAA/classes-vm.zip -d $(OUTPUT_ROOT)/j9classes/java.base/ "com/ibm/dataaccess/*"
-	unzip -qo $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/java9_dtfj-interface.jar -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj
-	unzip -qo $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/java9_dtfj.jar -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj
+
+dtfj.interface:
+	# generate dtfj.interface.jar
+	find "$(OPENJ9VM_SRC_DIR)/DTFJ Interface/src" -name *.java | grep -v module-info > $(OUTPUT_ROOT)/j9classes/dtfj.interface.log
+	sed -i 's/.*/\"&\"/' $(OUTPUT_ROOT)/j9classes/dtfj.interface.log
+	$(BOOT_JDK)/bin/javac -Xmodule:com.ibm.dtfj -cp $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj @$(OUTPUT_ROOT)/j9classes/dtfj.interface.log
+	rm -rf $(OUTPUT_ROOT)/j9classes/dtfj.interface.log
+
+dtfj:
+	# generate dtfj.jar
+	find "$(OPENJ9VM_SRC_DIR)/DTFJ Core File Support/src" -name *.java > $(OUTPUT_ROOT)/j9classes/dtfj.log
+	find "$(OPENJ9VM_SRC_DIR)/DTFJ J9/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
+	find "$(OPENJ9VM_SRC_DIR)/DTFJ JExtract/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
+	find "$(OPENJ9VM_SRC_DIR)/DTFJ Java Core/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
+	find "$(OPENJ9VM_SRC_DIR)/DTFJ Java Core Reader/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
+	find "$(OPENJ9VM_SRC_DIR)/DTFJ PHD/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
+	find "$(OPENJ9VM_SRC_DIR)/DTFJ_Utils/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
+	sed -i 's/.*/\"&\"/' $(OUTPUT_ROOT)/j9classes/dtfj.log
+	$(BOOT_JDK)/bin/javac -cp $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/recordio.jar:$(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/ibmjzos.jar:$(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/:$(OPENJ9VM_SRC_DIR)/VM_Source-Tools/lib/java9_dtfjview.jar -Xmodule:com.ibm.dtfj -XaddExports:java.base/jdk.internal.module=com.ibm.dtfj -XaddExports:java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED,com.ibm.dtfj -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj @$(OUTPUT_ROOT)/j9classes/dtfj.log
+	rm -rf $(OUTPUT_ROOT)/j9classes/dtfj.log
+
+dtfjview:
 	cp "$(OUTPUT_ROOT)/vm/J9 JCL/src/com.ibm.dtfj/module-info.java" $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/
 	rm -rf $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/META-INF
-	unzip -qo $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/java9_dtfjview.jar -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview
+	#generate dtfjview.jar
+	find "$(OPENJ9VM_SRC_DIR)/DTFJ View/src" -name *.java > $(OUTPUT_ROOT)/j9classes/dtfjview.log
+	sed -i 's/.*/\"&\"/' $(OUTPUT_ROOT)/j9classes/dtfjview.log
+	$(BOOT_JDK)/bin/javac -cp $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/recordio.jar:$(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/ -Xmodule:com.ibm.dtfjview -XaddExports:com.ibm.dtfjview/com.ibm.java.diagnostics.utils.plugins=ALL-UNNAMED,com.ibm.dtfjview -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview @$(OUTPUT_ROOT)/j9classes/dtfjview.log
 	cp "$(OUTPUT_ROOT)/vm/J9 JCL/src/com.ibm.dtfjview/module-info.java" $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview/
 	rm -rf $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview/META-INF
 	rm -rf $(OUTPUT_ROOT)/j9classes/META-INF
+
+compose-buildjvm:
 	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(OUTPUT_ROOT)/jdk/lib/amd64/
 	$(SED) -i -e 's/shape=vm.shape/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
 	$(MKDIR) -p $(OUTPUT_ROOT)/jdk/lib/amd64/compressedrefs/
@@ -219,7 +224,7 @@ J9_LIST := java.base jdk.attach java.logging java.management
 J9_SPECIFIC := com.ibm.management com.ibm.dtfj com.ibm.dtfjview
 OPENJ9_IMAGE_DIR:=jdk
 
-merge_module:
+merge_module: compose-buildjvm
 	$(eval $(shell rm -rf $(BUILD_JDK)/../moduleinfo.list))
 	$(eval override MODULE_LIST = $(filter-out $(J9_SPECIFIC), $(filter-out $(J9_LIST),$(shell find $(BUILD_JDK)/modules/ -maxdepth 1 -type d -exec basename '{}' \; | tail -n +2 | tr '\n' ' '))))
 	$(foreach module, $(J9_SPECIFIC), $(call copy-ibm-specific) $(\n))
