@@ -88,6 +88,30 @@ define compile-module-info
 	$(BUILD_JAVAC) -source 9 -target 9 -encoding ascii -d $(BUILD_JDK)/modules --module-source-path $(BUILD_JDK)/modules --module-path $(BUILD_JDK)/modules --system none @$(BUILD_JDK)/../moduleinfo.list
 endef
 
+# Find recursively in directory $1 all of the files with given extension $2.
+#
+# Parameters:
+#	param 1 is the name of the directory to search
+#	parem 2 is the file extension to search in given directory: e.g *.java
+# 
+define findFiles
+	$(foreach i,$(wildcard $1*),$(call findAllFiles,$i/,$2)) $(wildcard $1$2)
+endef
+
+# Finds recursively all of the files with given extension in the given source 
+# directories and outputs them to a file. 
+#
+# Parameters:
+# 	param 1 is a space separated list of source directories to search
+#	param 2 is the extension of the file to look up in the source directories
+#	param 3 is the name of the output file
+# 
+# Usage: $(call cacheFile, dir1 dir2, *.java, /path/to/sources.txt
+#
+define cacheFiles
+	$(foreach d, $1, @echo $(strip $(call findFiles, $d, $2)) >> $3)
+endef
+
 NUMCPU := $(shell grep -c ^processor /proc/cpuinfo)
 #$(info NUMCPU = $(NUMCPU))
 
