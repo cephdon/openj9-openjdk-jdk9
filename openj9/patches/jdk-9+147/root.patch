@@ -193,7 +193,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
    # have been built.
    exploded-image-optimize: java copy gendata java.base-libs java.base-launchers \
 -      buildtools-modules
-+      buildtools-modules j9vm-build
++      buildtools-modules j9vm-build j9vm-merge
  
    bootcycle-images: jdk-image
  
@@ -202,7 +202,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  launchers: $(LAUNCHER_TARGETS)
  
 -jmods: $(JMOD_TARGETS)
-+j9vm-merge: j9vm-build jdk.jlink-launchers exploded-image-optimize 
++j9vm-merge: j9vm-build jdk.jlink-launchers
 +
 +jmods: j9vm-merge $(JMOD_TARGETS)
  
