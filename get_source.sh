@@ -215,12 +215,8 @@ if [ ${j9flag} = "true" ] ; then
 	bash ./openj9/get_j9_source.sh ${j9_repos_options}
 
 	patch -p1 < ./openj9/patches/${hgtag}/root.patch
-	cd langtools
-	patch -p1 < ./../openj9/patches/${hgtag}/langtools.patch
-	cd ../jdk
+	cd jdk
 	patch -p1 < ./../openj9/patches/${hgtag}/jdk.patch
-	cd ../nashorn
-        patch -p1 < ./../openj9/patches/${hgtag}/nashorn.patch 
         cd ..
 
 else
