@@ -1,24 +1,3 @@
-diff --git a/make/Tools.gmk b/make/Tools.gmk
---- a/make/Tools.gmk
-+++ b/make/Tools.gmk
-@@ -38,7 +38,7 @@
- ################################################################################
- 
- ifeq ($(BOOT_JDK_MODULAR), true)
--  COMPILEFONTCONFIG_ADD_EXPORTS := --add-exports java.desktop/sun.awt=ALL-UNNAMED
-+  COMPILEFONTCONFIG_ADD_EXPORTS := -XaddExports:java.desktop/sun.awt=ALL-UNNAMED
- endif
- 
- TOOL_COMPILEFONTCONFIG = $(JAVA_SMALL) -cp $(BUILDTOOLS_OUTPUTDIR)/jdk_tools_classes \
-@@ -94,7 +94,7 @@
- # Nimbus is used somewhere in the swing build.
- 
- ifeq ($(BOOT_JDK_MODULAR), true)
--  COMPILENIMBUS_ADD_MODS := --add-modules java.xml.bind
-+  COMPILENIMBUS_ADD_MODS := -addmods java.xml.bind
- endif
- 
- TOOL_GENERATENIMBUS = $(JAVA_SMALL) -cp $(BUILDTOOLS_OUTPUTDIR)/jdk_tools_classes \
 diff --git a/make/copy/Copy-java.base.gmk b/make/copy/Copy-java.base.gmk
 --- a/make/copy/Copy-java.base.gmk
 +++ b/make/copy/Copy-java.base.gmk
@@ -48,26 +27,6 @@ diff --git a/make/gendata/GendataBlacklistedCerts.gmk b/make/gendata/GendataBlac
  
 -TARGETS += $(GENDATA_BLACKLISTED_CERTS)
 +#TARGETS += $(GENDATA_BLACKLISTED_CERTS)
-diff --git a/make/gendata/GendataBreakIterator.gmk b/make/gendata/GendataBreakIterator.gmk
---- a/make/gendata/GendataBreakIterator.gmk
-+++ b/make/gendata/GendataBreakIterator.gmk
-@@ -62,11 +62,11 @@
- 
- ifeq ($(BOOT_JDK_MODULAR), true)
-   BREAK_ITERATOR_BOOTCLASSPATH := \
--      --patch-module java.base=$(BREAK_ITERATOR_CLASSES)/java.base \
--      --patch-module jdk.localedata=$(BREAK_ITERATOR_CLASSES)/jdk.localedata \
--      --add-exports java.base/sun.text=ALL-UNNAMED \
--      --add-exports java.base/sun.text.resources=ALL-UNNAMED \
--      --add-exports jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
-+      -Xpatch:java.base=$(BREAK_ITERATOR_CLASSES)/java.base \
-+      -Xpatch:jdk.localedata=$(BREAK_ITERATOR_CLASSES)/jdk.localedata \
-+      -XaddExports:java.base/sun.text=ALL-UNNAMED,java.base/sun.text.resources=ALL-UNNAMED,jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
-+      #--add-exports java.base/sun.text.resources=ALL-UNNAMED \
-+      #--add-exports jdk.localedata/sun.text.resources.ext=ALL-UNNAMED \
-       #
- else
-   BREAK_ITERATOR_BOOTCLASSPATH := -Xbootclasspath/p:$(call PathList, \
 diff --git a/src/java.base/share/classes/module-info.java b/src/java.base/share/classes/module-info.java
 --- a/src/java.base/share/classes/module-info.java
 +++ b/src/java.base/share/classes/module-info.java

@@ -1,16 +1,6 @@
 diff --git a/common/autoconf/boot-jdk.m4 b/common/autoconf/boot-jdk.m4
 --- a/common/autoconf/boot-jdk.m4
 +++ b/common/autoconf/boot-jdk.m4
-@@ -305,7 +305,8 @@
-   BOOT_JDK_SOURCETARGET="-source 8 -target 8"
-   AC_SUBST(BOOT_JDK_SOURCETARGET)
- 
--  ADD_JVM_ARG_IF_OK([--patch-module foo=bar], dummy, [$JAVA])
-+  #ADD_JVM_ARG_IF_OK([--patch-module foo=bar], dummy, [$JAVA])
-+  ADD_JVM_ARG_IF_OK([-Xpatch:foo=bar], dummy, [$JAVA])
-   AC_MSG_CHECKING([if Boot JDK supports modules])
-   if test "x$JVM_ARG_OK" = "xtrue"; then
-     AC_MSG_RESULT([yes])
 @@ -526,8 +527,8 @@
      fi
    fi
@@ -105,15 +95,6 @@ diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
  
  # Use ?= as this can be overridden from bootcycle-spec.gmk
  BOOT_JDK_MODULAR ?= @BOOT_JDK_MODULAR@
-@@ -580,7 +583,7 @@
-     jdk.jdeps jdk.javadoc jdk.rmic
- ifeq ($(BOOT_JDK_MODULAR), true)
-   INTERIM_OVERRIDE_MODULES_ARGS = $(foreach m, $(INTERIM_OVERRIDE_MODULES), \
--      --patch-module $m=$(BUILDTOOLS_OUTPUTDIR)/override_modules/$m)
-+      -Xpatch:$m=$(BUILDTOOLS_OUTPUTDIR)/override_modules/$m)
-   INTERIM_LANGTOOLS_ARGS = $(INTERIM_OVERRIDE_MODULES_ARGS)
-   JAVAC_MAIN_CLASS = -m jdk.compiler/com.sun.tools.javac.Main
-   JAVADOC_MAIN_CLASS = -m jdk.javadoc/jdk.javadoc.internal.tool.Main
 @@ -608,6 +611,10 @@
    RC_FLAGS:=@RC_FLAGS@
  endif
@@ -132,7 +113,7 @@ diff --git a/make/Images.gmk b/make/Images.gmk
  # All modules for the current target platform.
  ALL_MODULES := $(call FindAllModules)
  
-+ALL_MODULES += com.ibm.management com.ibm.dtfj com.ibm.dtfjview
++ALL_MODULES += com.ibm.management 
 +
  $(eval $(call ReadImportMetaData))
  
@@ -167,7 +148,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  # Jmod targets
  
 -JMOD_MODULES := $(ALL_MODULES)
-+JMOD_MODULES := $(ALL_MODULES) com.ibm.management com.ibm.dtfj com.ibm.dtfjview
++JMOD_MODULES := $(ALL_MODULES) com.ibm.management 
  JMOD_TARGETS := $(addsuffix -jmod, $(JMOD_MODULES))
  
  define DeclareJmodRecipe

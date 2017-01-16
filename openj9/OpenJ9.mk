@@ -133,6 +133,8 @@ stage-j9:
 	cp -r $(OPENJ9VM_SRC_DIR)/../tooling/VM_Build-Specifications/* $(OUTPUT_ROOT)/vm
 	@sed -i -e 's/transitive/public/g' '$(OUTPUT_ROOT)/vm/J9 JCL/src/com.ibm.management/module-info.java'
 	@sed -i -e 's/transitive/public/g' '$(OUTPUT_ROOT)/vm/J9 JCL/src/com.ibm.dtfj/module-info.java'
+	@sed -i -e '/shareclasses/d' '$(OUTPUT_ROOT)/vm/J9 JCL/src/java.base/module-info.java'
+	@sed -i -e '/dtfj/d' '$(OUTPUT_ROOT)/vm/J9 JCL/src/java.base/module-info.java'
 	mkdir $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/dbghelp.dll $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/buildutils.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/buildutils.jar
@@ -185,7 +187,8 @@ compile-j9: run-preprocessors-j9
 	(cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) all)
 	@echo "--------------------- Finished compiling OpenJ9 ------------------------"
 
-setup-j9jcl-pre-jcl: unpack.vmjar dtfj.interface dtfj dtfjview
+XXsetup-j9jcl-pre-jcl: unpack.vmjar dtfj.interface dtfj dtfjview
+setup-j9jcl-pre-jcl: unpack.vmjar 
 
 unpack.vmjar: 
 	@echo "----------------------Extract vm.jar and jcl-4-raw.jar ------------"
@@ -242,7 +245,8 @@ compose-buildjvm:
 	cp $(OUTPUT_ROOT)/vm/classlib.properties $(OUTPUT_ROOT)/jdk/lib/amd64/compressedrefs
 
 J9_LIST := java.base jdk.attach java.logging java.management
-J9_SPECIFIC := com.ibm.management com.ibm.dtfj com.ibm.dtfjview
+XXJ9_SPECIFIC := com.ibm.management com.ibm.dtfj com.ibm.dtfjview
+J9_SPECIFIC := com.ibm.management 
 OPENJ9_IMAGE_DIR:=jdk
 
 merge_module: compose-buildjvm
