@@ -52,7 +52,7 @@ usage() {
 	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9] [... other j9 options]"
 	echo "where:"
 	echo "	-h|--help 				print this help, then exit"
-	echo "	-r|--revision=<tag> 	is one of: jdk-9+145 jdk-9+147"
+	echo "	-r|--revision=<tag> 	is one of: jdk-9+147 jdk-9+148"
 	echo "							[Note: fetch the given revision, otherwise get the latest sources"
 	echo "	-j9|--with-j9 			get the OpenJ9 latest sources "
 	echo " other j9 options (used only with -j9|--with-j9 option): "
@@ -76,7 +76,7 @@ usage() {
 }
 
 j9flag="false"
-hgtag="jdk-9+147"
+hgtag="jdk-9+148"
 
 
 for i in "$@"
@@ -113,7 +113,7 @@ do
 done
 
 # expected OpenJDK tags
-hgtags="jdk-9+145 jdk-9+147"
+hgtags="jdk-9+147 jdk-9+148"
 
 # check if sources loaded
 has_sources="false"
