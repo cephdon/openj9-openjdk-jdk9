@@ -131,9 +131,9 @@ stage-j9:
 	rm -rf $(OUTPUT_ROOT)/vm/VM_Common
 	cp -r $(OPENJ9VM_SRC_DIR)/../tooling/VM_Build-Tools/* $(OUTPUT_ROOT)/vm
 	cp -r $(OPENJ9VM_SRC_DIR)/../tooling/VM_Build-Specifications/* $(OUTPUT_ROOT)/vm
-	@sed -i -e 's/, com.ibm.sharedclasses//g' '$(OUTPUT_ROOT)/vm/J9 JCL/src/java.base/module-info.java'
-	@sed -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/J9 JCL/src/java.base/module-info.java'
-	@sed -i -e '/dtfj/d' '$(OUTPUT_ROOT)/vm/J9 JCL/src/java.base/module-info.java'
+	@sed -i -e 's/, com.ibm.sharedclasses//g' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
+	@sed -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
+	@sed -i -e '/dtfj/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	mkdir $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/dbghelp.dll $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/buildutils.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/buildutils.jar
@@ -175,8 +175,8 @@ run-preprocessors-j9: stage-j9
 	@echo J9VM version string set to : $(J9VM_SHA)
 	sed -i -e 's/gcc-4.6/gcc/g' $(OUTPUT_ROOT)/vm/makelib/mkconstants.mk
 	sed -i -e 's/O3 -fno-strict-aliasing/O0 -Wno-format -Wno-unused-result -fno-strict-aliasing -fno-stack-protector/g' $(OUTPUT_ROOT)/vm/makelib/targets.mk
-	(cd "$(OUTPUT_ROOT)/vm/J9 JCL/" && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.8 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
-	(cd "$(OUTPUT_ROOT)/vm/J9 JCL/" && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.9 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
+	(cd $(OUTPUT_ROOT)/vm/jcl/ && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.8 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
+	(cd $(OUTPUT_ROOT)/vm/jcl/ && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.9 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
 	$(MAKE) $(MAKEFLAGS) -f "$(OUTPUT_ROOT)/vm/JCL Ant Build/jcl_build.mk" SPEC_LEVEL=1.9 JPP_CONFIG=SIDECAR19_MODULAR-SE_B136 BUILD_ID=$(shell date +'%N') COMPILER_BCP=sun190B136 JPP_DIRNAME=jclSC19ModularB136 JAVA_BIN=$(BOOT_JDK)/bin/ BUILD_ROOT=$(OUTPUT_ROOT)/vm NVCC=/usr/local/cuda-5.5/bin/nvcc WORKSPACE=$(OUTPUT_ROOT)/vm 
 	@echo "---------------- Finished OpenJ9 preprocessors ------------------------"
 
@@ -192,7 +192,7 @@ unpack.vmjar:
 	@echo "----------------------Extract vm.jar and jcl-4-raw.jar ------------"
 	rm -rf $(OUTPUT_ROOT)/j9classes
 	mkdir -p $(OUTPUT_ROOT)/j9classes
-	unzip -qo "$(OUTPUT_ROOT)/vm/J9 JCL/cuda4j_j9_modular.jar" -d $(OUTPUT_ROOT)/j9classes
+	unzip -qo "$(OUTPUT_ROOT)/vm/jcl/cuda4j_j9_modular.jar" -d $(OUTPUT_ROOT)/j9classes
 	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC19ModularB136/classes-vm.zip -d $(OUTPUT_ROOT)/j9classes
 	unzip -qo $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jcl-4-raw.jar -d $(OUTPUT_ROOT)/j9classes/java.base
 
@@ -217,13 +217,13 @@ dtfj:
 	rm -rf $(OUTPUT_ROOT)/j9classes/dtfj.log
 
 dtfjview:
-	cp "$(OUTPUT_ROOT)/vm/J9 JCL/src/com.ibm.dtfj/module-info.java" $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/
+	cp $(OUTPUT_ROOT)/vm/jcl/src/com.ibm.dtfj/module-info.java $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/
 	rm -rf $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/META-INF
 	#generate dtfjview.jar
 	find "$(OPENJ9VM_SRC_DIR)/DTFJ View/src" -name *.java > $(OUTPUT_ROOT)/j9classes/dtfjview.log
 	sed -i 's/.*/\"&\"/' $(OUTPUT_ROOT)/j9classes/dtfjview.log
 	$(BOOT_JDK)/bin/javac -cp $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/recordio.jar:$(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/ -Xmodule:com.ibm.dtfjview -XaddExports:com.ibm.dtfjview/com.ibm.java.diagnostics.utils.plugins=ALL-UNNAMED,com.ibm.dtfjview -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview @$(OUTPUT_ROOT)/j9classes/dtfjview.log
-	cp "$(OUTPUT_ROOT)/vm/J9 JCL/src/com.ibm.dtfjview/module-info.java" $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview/
+	cp $(OUTPUT_ROOT)/vm/jcl/src/com.ibm.dtfjview/module-info.java $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview/
 	rm -rf $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview/META-INF
 	rm -rf $(OUTPUT_ROOT)/j9classes/META-INF
 
