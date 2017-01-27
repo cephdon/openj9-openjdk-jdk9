@@ -34,7 +34,7 @@ declare -A j9repos
 declare -A branches
 declare -A default_j9repos=( [j9vm]=j9/j9vm [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [tr.open]=jit/tr.open )
 declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master [tooling]=master [tr.open]=java-master )
-
+declare -A commands
 
 ostype=`uname -s`
 
@@ -124,7 +124,8 @@ else
 fi
 
 # clone OpenJ9 repos
-echo "Get OpenJ9 sources"
+echo "[$(date +%F) $(date +%T)] Get OpenJ9 sources"
+START_TIME=`date +%s`
 
 for i in "${!default_j9repos[@]}" ; do
 	# clone repo
@@ -132,13 +133,43 @@ for i in "${!default_j9repos[@]}" ; do
 	if [ ${branches[$i]+_} ]; then
 		branch=${branches[$i]}
 	fi
-	
+
 	git_url=${base_git_url}${default_j9repos[$i]}.git
-	
+
 	if [ ${j9repos[$i]+_} ]; then
 		git_url="${j9repos[$i]}"
 	fi
 
 	git_clone_command="${git} clone --recursive -b ${branch} ${git_url} ${i}"
-	${git_clone_command} || exit $?
+	commands[$i]=${git_clone_command}
+
+	# run git clone in parallel 
+	( ${git_clone_command} ; echo "$?" > /tmp/${i}.pid.rc ) 2>&1 &
+done
+
+
+# Wait for all subprocesses to complete
+wait
+
+END_TIME=`date +%s`
+echo "[ $(date +%F) $(date +%T)] OpenJ9 clone repositories finished in $(($END_TIME - $START_TIME)) seconds"
+
+for i in "${!default_j9repos[@]}" ; do
+	if [ -e /tmp/${i}.pid.rc ]; then 
+		rc=`cat /tmp/${i}.pid.rc | tr -d ' \n\r'`
+
+		if [ "$rc" -ne "0" ]; then
+			echo "ERROR: repository ${i} exited abnormally!"
+			cat /tmp/${i}.pid.rc
+			echo "Re-run: ${commands[$i]}"
+
+			# clean up sources
+			if [ -d ${i} ] ; then
+				rm -fdr ${i}
+			fi
+		fi
+
+		# clean up pid file
+		rm -f /tmp/${i}.pid.rc
+	fi
 done

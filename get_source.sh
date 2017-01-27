@@ -116,7 +116,6 @@ done
 hgtags="jdk-9+147 jdk-9+148"
 
 # check if sources loaded
-has_sources="false"
 if [ ${j9flag} = "true" ] ; then
 	all_repos="corba jaxp jaxws langtools jdk nashorn binaries j9vm omr tooling"
 else
