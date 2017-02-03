@@ -80,7 +80,7 @@ define merge-module-info
 	$(BUILD_JAVAP) -c -p $(BUILD_JDK)/modules/$(module)/module-info.class > $(BUILD_JDK)/modules/$(module)/module-info.java.temp
 	sed -i -e 's/\$$/\./g' $(BUILD_JDK)/modules/$(module)/module-info.java.temp
 	tail -n +2 $(BUILD_JDK)/modules/$(module)/module-info.java.temp > $(BUILD_JDK)/modules/$(module)/module-info.java.oracle
-	$(BUILD_JAVA) -DusePublicKeyword=false -cp $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/ com.ibm.moduletools.ModuleInfoMerger $(BUILD_JDK)/modules/$(module)/module-info.java.oracle $(BUILD_JDK)/modules/$(module)/module-info.java.j9 $(BUILD_JDK)/modules/$(module)/module-info.java
+	$(BUILD_JAVA) -DusePublicKeyword=false -cp $(OUTPUT_ROOT)/vm/sourcetools/lib/ com.ibm.moduletools.ModuleInfoMerger $(BUILD_JDK)/modules/$(module)/module-info.java.oracle $(BUILD_JDK)/modules/$(module)/module-info.java.j9 $(BUILD_JDK)/modules/$(module)/module-info.java
 	echo $(BUILD_JDK)/modules/$(module)/module-info.java >> $(BUILD_JDK)/../moduleinfo.list
 endef
 
@@ -149,10 +149,10 @@ stage-j9:
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/indexer.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/junit3.8.2.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/junit.jclbuildtools.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ Build\ Tools/lib/JUnit.jar
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/xercesImpl.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/dom4j-1.6.1.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/xmlParserAPIs-2.0.2.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/gnujaxp.jar $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib/
+	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/xercesImpl.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
+	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/dom4j-1.6.1.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
+	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/xmlParserAPIs-2.0.2.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
+	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/gnujaxp.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
 	mkdir -p $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190
 	mkdir $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B136
 	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190B136.jar $(OUTPUT_ROOT)/vm/J9\ JCL\ buildpath/sun190B136/rt-compressed.jar
@@ -169,7 +169,7 @@ stage-j9:
 run-preprocessors-j9: stage-j9
 	@echo "---------------- Running OpenJ9 preprocessors ------------------------"
 	cd $(OUTPUT_ROOT)/vm
-	$(BOOT_JDK)/bin/javac "$(OUTPUT_ROOT)/vm/J9 JCL Build Tools/src/com/ibm/moduletools/ModuleInfoMerger.java" -d $(OUTPUT_ROOT)/vm/VM_Source-Tools/lib
+	$(BOOT_JDK)/bin/javac "$(OUTPUT_ROOT)/vm/J9 JCL Build Tools/src/com/ibm/moduletools/ModuleInfoMerger.java" -d $(OUTPUT_ROOT)/vm/sourcetools/lib
 	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=linux_x86-64 JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" tools)
 	$(eval J9VM_SHA=$(shell git -C $(OPENJ9VM_SRC_DIR) rev-parse --short HEAD))
 	@sed -i -e 's/developer.compile/$(J9VM_SHA)/g' $(OUTPUT_ROOT)/vm/include/j9version.h
@@ -214,7 +214,7 @@ dtfj:
 	find "$(OPENJ9VM_SRC_DIR)/DTFJ PHD/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
 	find "$(OPENJ9VM_SRC_DIR)/DTFJ_Utils/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
 	sed -i 's/.*/\"&\"/' $(OUTPUT_ROOT)/j9classes/dtfj.log
-	$(BOOT_JDK)/bin/javac -cp $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/recordio.jar:$(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/ibmjzos.jar:$(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/:$(OPENJ9VM_SRC_DIR)/VM_Source-Tools/lib/java9_dtfjview.jar -Xmodule:com.ibm.dtfj -XaddExports:java.base/jdk.internal.module=com.ibm.dtfj -XaddExports:java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED,com.ibm.dtfj -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj @$(OUTPUT_ROOT)/j9classes/dtfj.log
+	$(BOOT_JDK)/bin/javac -cp $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/recordio.jar:$(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/ibmjzos.jar:$(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/:$(OPENJ9VM_SRC_DIR)/sourcetools/lib/java9_dtfjview.jar -Xmodule:com.ibm.dtfj -XaddExports:java.base/jdk.internal.module=com.ibm.dtfj -XaddExports:java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED,com.ibm.dtfj -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj @$(OUTPUT_ROOT)/j9classes/dtfj.log
 	rm -rf $(OUTPUT_ROOT)/j9classes/dtfj.log
 
 dtfjview:
