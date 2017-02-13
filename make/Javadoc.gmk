@@ -1,4 +1,4 @@
-# Copyright (c) 1997, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 1997, 2017, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@ default: all
 
 include $(SPEC)
 include MakeBase.gmk
+include $(JDK_TOPDIR)/make/Tools.gmk
 
 ################################################################################
 
@@ -86,7 +87,7 @@ else
     DRAFT_WINDOW_TITLE_MARKER := $(SPACE)[build $(VERSION_BUILD)]
   endif
   EARLYACCESS_TOP := \
-      <div style="background-color: $$(HASH)EEEEEE"><div style="padding: 6px; \
+      <div style="background-color: $(HASH)EEEEEE"><div style="padding: 6px; \
       margin-top: 2px; margin-bottom: 6px; margin-left: 6px; margin-right: \
       6px; text-align: justify; font-size: 80%; font-family: Helvetica, Arial, \
       sans-serif; font-weight: normal;">Please note that the specifications \
@@ -122,6 +123,7 @@ CORE_EXCLUDED_PACKAGES += \
     org.w3c.dom.html \
     org.w3c.dom.stylesheets \
     org.w3c.dom.xpath \
+    org.graalvm.compiler.% \
     #
 
 CORE_PACKAGES := $(filter-out $(CORE_EXCLUDED_PACKAGES), \
@@ -147,10 +149,10 @@ $(CORE_PACKAGES_LIST_FILE): $(CORE_PACKAGES_VARDEPS_FILE)
 # arg 2: copyright url (optional)
 # arg 3: free-form text snippet (optional)
 define GenerateBottom
-  <font size="-1">$(if $(strip $3), $(strip $3))<br> $(if \
+  <span style="font-size:smaller">$(if $(strip $3), $(strip $3))<br> $(if \
       $(strip $2),<a href="$(strip $2)">Copyright</a>,Copyright) \
       &copy; $(strip $1), $(COPYRIGHT_YEAR), $(FULL_COMPANY_NAME). \
-      $(COMPANY_ADDRESS). All rights reserved.</font>
+      $(COMPANY_ADDRESS). All rights reserved.</span>
 endef
 
 # Speed up finding by filling cache
@@ -179,6 +181,8 @@ DEFAULT_JAVADOC_TAGS := \
     -tag see \
     -tag 'jvms:a:See <cite>The Java&trade; Virtual Machine Specification</cite>:' \
     -tag 'jls:a:See <cite>The Java&trade; Language Specification</cite>:' \
+    -taglet build.tools.taglet.Incubating \
+    -tagletpath $(BUILDTOOLS_OUTPUTDIR)/jdk_tools_classes \
     #
 
 DEFAULT_JAVADOC_OPTIONS := -XDignore.symbol.file=true -use -keywords -notimestamp \
@@ -234,10 +238,6 @@ define SetupJavadocGenerationBody
 
   $1_OPTIONS += --add-modules $$(call CommaList, $$($1_MODULES))
 
-  ifneq ($$(LOG_LEVEL), trace)
-    $1_OPTIONS += -quiet
-  endif
-
   ifneq ($$($1_DISABLED_DOCLINT), )
     # Create a string like ",-syntax,-html"
     $1_DOCLINT_EXCEPTIONS := ,$$(call CommaList, $$(addprefix -, $$($1_DISABLED_DOCLINT)))
@@ -291,6 +291,13 @@ define SetupJavadocGenerationBody
   $1_VARDEPS_FILE := $$(call DependOnVariable, $1_VARDEPS, \
        $$(SUPPORT_OUTPUTDIR)/docs/$1.vardeps)
 
+  # Do not store debug level options in VARDEPS.
+  ifneq ($$(LOG_LEVEL), trace)
+    $1_OPTIONS += -quiet
+  else
+    $1_OPTIONS += -verbose
+  endif
+
   $1_PACKAGE_DEPS := $$(call CacheFind, $$(wildcard $$(foreach p, \
       $$(subst .,/,$$(strip $$($1_PACKAGES))), \
       $$(addsuffix /$$p, $$(wildcard $$(JAVADOC_SOURCE_DIRS))))))
@@ -307,7 +314,7 @@ define SetupJavadocGenerationBody
   $1_INDEX_FILE := $$(JAVADOC_OUTPUTDIR)/$$($1_OUTPUT_DIRNAME)/index.html
 
   # Rule for actually running javadoc
-  $$($1_INDEX_FILE): $$($1_VARDEPS_FILE) $$($1_PACKAGE_DEPS) $$($1_DEPS)
+  $$($1_INDEX_FILE): $(BUILD_TOOLS_JDK) $$($1_VARDEPS_FILE) $$($1_PACKAGE_DEPS) $$($1_DEPS)
 	$$(call LogWarn, Generating Javadoc from $$(words $$($1_PACKAGES)) package(s) for $$($1_OUTPUT_DIRNAME))
 	$$(call MakeDir, $$(@D))
         ifneq ($$($1_PACKAGES_FILE), )
@@ -499,6 +506,21 @@ TARGETS += $(httpserver)
 
 ################################################################################
 
+$(eval $(call SetupJavadocGeneration, httpclient, \
+    MODULES := jdk.incubator.httpclient, \
+    PACKAGES := \
+        jdk.incubator.http, \
+    API_ROOT := jre, \
+    DEST_DIR := incubator/httpclient/spec, \
+    TITLE := Java&trade; HTTP Client API (incubator module), \
+    FIRST_COPYRIGHT_YEAR := 2015, \
+    DISABLED_DOCLINT := accessibility missing syntax, \
+))
+
+TARGETS += $(httpclient)
+
+################################################################################
+
 $(eval $(call SetupJavadocGeneration, jsobject, \
     MODULES := jdk.jsobject, \
     PACKAGES := netscape.javascript, \
@@ -561,12 +583,13 @@ $(eval $(call SetupJavadocGeneration, jshellapi, \
     PACKAGES := \
         jdk.jshell \
         jdk.jshell.spi \
-        jdk.jshell.execution, \
+        jdk.jshell.execution \
+        jdk.jshell.tool, \
     API_ROOT := jdk, \
     DEST_DIR := jshell, \
-    OVERVIEW := $(LANGTOOLS_TOPDIR)/src/jdk.jshell/share/classes/jdk/jshell/overview.html, \
     TITLE := JShell API, \
     FIRST_COPYRIGHT_YEAR := 2015, \
+    SPLIT_INDEX := TRUE, \
 ))
 
 TARGETS += $(jshellapi)
@@ -663,22 +686,6 @@ $(eval $(call SetupJavadocGeneration, jdknet, \
 TARGETS += $(jdknet)
 
 ################################################################################
-
-# TODO: Need to decide when the plugin API is ready to publish as experimental API.
-# This target is temporarily added for internal use for now.
-$(eval $(call SetupJavadocGeneration, jlinkplugins, \
-    MODULES := jdk.jlink, \
-    PACKAGES := jdk.tools.jlink.plugin, \
-    API_ROOT := jdk, \
-    DEST_DIR := jlink, \
-    TITLE := JLink Plugin API - EXPERIMENTAL, \
-    FIRST_COPYRIGHT_YEAR := 2015, \
-    DISABLED_DOCLINT := html missing syntax, \
-))
-
-TARGETS += $(jlinkplugins)
-
-################################################################################
 # Copy JDWP html file
 
 JDWP_HTML := $(SUPPORT_OUTPUTDIR)/gensrc/jdk.jdi/jdwp-protocol.html
@@ -736,7 +743,7 @@ $(eval $(call IncludeCustomExtension, , Javadoc.gmk))
 
 ################################################################################
 
-docs-javadoc: $(TARGETS)
+docs-javadoc: $(BUILD_TOOLS_JDK) $(TARGETS)
 
 docs-copy: $(COPY_TARGETS)
 

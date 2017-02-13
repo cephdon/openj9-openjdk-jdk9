@@ -196,6 +196,9 @@ unpack.vmjar:
 	unzip -qo "$(OUTPUT_ROOT)/vm/jcl/cuda4j_j9_modular.jar" -d $(OUTPUT_ROOT)/j9classes
 	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC19ModularB136/classes-vm.zip -d $(OUTPUT_ROOT)/j9classes
 	unzip -qo $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jcl-4-raw.jar -d $(OUTPUT_ROOT)/j9classes/java.base
+	mkdir -p $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
+	cp $(OUTPUT_ROOT)/vm/j9vm_b150/libjvm.so $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
+	cp $(OUTPUT_ROOT)/vm/libjsig.so $(OUTPUT_ROOT)/support/modules_libs/java.base/
 
 dtfj.interface:
 	# generate dtfj.interface.jar
@@ -229,19 +232,19 @@ dtfjview:
 	rm -rf $(OUTPUT_ROOT)/j9classes/META-INF
 
 compose-buildjvm:
-	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(OUTPUT_ROOT)/jdk/lib/amd64/
+	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(OUTPUT_ROOT)/jdk/lib/
 	$(SED) -i -e 's/shape=vm.shape/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
-	$(MKDIR) -p $(OUTPUT_ROOT)/jdk/lib/amd64/compressedrefs/
-	cp -R $(OUTPUT_ROOT)/vm/*.so $(OUTPUT_ROOT)/jdk/lib/amd64/compressedrefs/
+	$(MKDIR) -p $(OUTPUT_ROOT)/jdk/lib/compressedrefs/
+	cp -R $(OUTPUT_ROOT)/vm/*.so $(OUTPUT_ROOT)/jdk/lib/compressedrefs/
 	cp $(OUTPUT_ROOT)/vm/J9TraceFormat.dat $(OUTPUT_ROOT)/jdk/lib/
 	cp $(OUTPUT_ROOT)/vm/OMRTraceFormat.dat $(OUTPUT_ROOT)/jdk/lib/
 	cp -R $(OUTPUT_ROOT)/vm/options.default $(OUTPUT_ROOT)/jdk/lib/
 	cp -R $(OUTPUT_ROOT)/vm/java*properties $(OUTPUT_ROOT)/jdk/lib/
-	mkdir -p $(OUTPUT_ROOT)/jdk/lib/amd64/j9vm
-	cp $(OUTPUT_ROOT)/vm/redirector/libjvm_b148.so $(OUTPUT_ROOT)/jdk/lib/amd64/j9vm/libjvm.so
-	cp $(OUTPUT_ROOT)/vm/j9vm_b148/libjvm.so $(OUTPUT_ROOT)/jdk/lib/amd64/compressedrefs
+	mkdir -p $(OUTPUT_ROOT)/jdk/lib/j9vm
+	cp $(OUTPUT_ROOT)/vm/redirector/libjvm_b150.so $(OUTPUT_ROOT)/jdk/lib/j9vm/libjvm.so
+	cp $(OUTPUT_ROOT)/vm/j9vm_b150/libjvm.so $(OUTPUT_ROOT)/jdk/lib/compressedrefs
 	cp $(OUTPUT_ROOT)/vm/classlib.properties  $(OUTPUT_ROOT)/jdk/lib
-	cp $(OUTPUT_ROOT)/vm/classlib.properties $(OUTPUT_ROOT)/jdk/lib/amd64/compressedrefs
+	cp $(OUTPUT_ROOT)/vm/classlib.properties $(OUTPUT_ROOT)/jdk/lib/compressedrefs
 
 J9_LIST := java.base jdk.attach java.logging java.management
 XXJ9_SPECIFIC := com.ibm.management com.ibm.dtfj com.ibm.dtfjview
@@ -257,19 +260,19 @@ merge_module: compose-buildjvm
 	$(call compile-module-info)
 
 compose:
-	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/
+	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
 	$(SED) -i -e 's/shape=vm.shape/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
-	$(MKDIR) -p $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/
-	cp -R $(OUTPUT_ROOT)/vm/*.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs/
+	$(MKDIR) -p $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/compressedrefs/
+	cp -R $(OUTPUT_ROOT)/vm/*.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/compressedrefs/
 	cp $(OUTPUT_ROOT)/vm/J9TraceFormat.dat $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
 	cp $(OUTPUT_ROOT)/vm/OMRTraceFormat.dat $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
 	cp -R $(OUTPUT_ROOT)/vm/options.default $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
 	cp -R $(OUTPUT_ROOT)/vm/java*properties $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
-	mkdir -p $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/j9vm
-	cp $(OUTPUT_ROOT)/vm/redirector/libjvm_b148.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/j9vm/libjvm.so
-	cp $(OUTPUT_ROOT)/vm/j9vm_b148/libjvm.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs
+	mkdir -p $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/j9vm
+	cp $(OUTPUT_ROOT)/vm/redirector/libjvm_b150.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/j9vm/libjvm.so
+	cp $(OUTPUT_ROOT)/vm/j9vm_b150/libjvm.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/compressedrefs
 	cp $(OUTPUT_ROOT)/vm/classlib.properties  $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib
-	cp $(OUTPUT_ROOT)/vm/classlib.properties $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/amd64/compressedrefs
+	cp $(OUTPUT_ROOT)/vm/classlib.properties $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/compressedrefs
 
 clean-j9:
 	( cd $(OUTPUT_ROOT)/vm && \
