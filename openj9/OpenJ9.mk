@@ -117,7 +117,7 @@ NUMCPU := $(shell grep -c ^processor /proc/cpuinfo)
 
 override MAKEFLAGS := -j $(NUMCPU)
 
-.PHONY: clean-j9 clean-j9-dist compose-j9 create-jmod prepare-jmod setup-j9jcl compile-j9 stage-j9 openj9 run-preprocessors-j9 build-j9 setup-j9jcl-pre-jcl merge_module compose compose-buildjvm unpack.vmjar dtfj dtfj.interface dtfjview
+.PHONY: clean-j9 clean-j9-dist compose-j9 create-jmod prepare-jmod setup-j9jcl compile-j9 stage-j9 openj9 run-preprocessors-j9 build-j9 setup-j9jcl-pre-jcl merge_module compose compose-buildjvm 
 .NOTPARALLEL:
 build-j9: stage-j9 run-preprocessors-j9 compile-j9 setup-j9jcl-pre-jcl
 
@@ -178,7 +178,7 @@ run-preprocessors-j9: stage-j9
 	sed -i -e 's/O3 -fno-strict-aliasing/O0 -Wno-format -Wno-unused-result -fno-strict-aliasing -fno-stack-protector/g' $(OUTPUT_ROOT)/vm/makelib/targets.mk
 	(cd $(OUTPUT_ROOT)/vm/jcl/ && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.8 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
 	(cd $(OUTPUT_ROOT)/vm/jcl/ && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.9 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
-	$(MAKE) $(MAKEFLAGS) -f "$(OUTPUT_ROOT)/vm/JCL Ant Build/jcl_build.mk" SPEC_LEVEL=1.9 JPP_CONFIG=SIDECAR19_MODULAR-SE_B136 BUILD_ID=$(shell date +'%N') COMPILER_BCP=sun190B136 JPP_DIRNAME=jclSC19ModularB136 JAVA_BIN=$(BOOT_JDK)/bin/ BUILD_ROOT=$(OUTPUT_ROOT)/vm NVCC=/usr/local/cuda-5.5/bin/nvcc WORKSPACE=$(OUTPUT_ROOT)/vm 
+	$(MAKE) $(MAKEFLAGS) -f "$(OUTPUT_ROOT)/vm/JCL Ant Build/jcl_build.mk" IBMJZOS_JAR=$(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/ibmjzos.jar SPEC_LEVEL=1.9 JPP_CONFIG=SIDECAR19_MODULAR-SE_B136 BUILD_ID=$(shell date +'%N') COMPILER_BCP=sun190B136 JPP_DIRNAME=jclSC19ModularB136 JAVA_BIN=$(BOOT_JDK)/bin/ BUILD_ROOT=$(OUTPUT_ROOT)/vm NVCC=/usr/local/cuda-5.5/bin/nvcc WORKSPACE=$(OUTPUT_ROOT)/vm 
 	@echo "---------------- Finished OpenJ9 preprocessors ------------------------"
 
 compile-j9: run-preprocessors-j9 
@@ -186,10 +186,7 @@ compile-j9: run-preprocessors-j9
 	(cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) all)
 	@echo "--------------------- Finished compiling OpenJ9 ------------------------"
 
-XXsetup-j9jcl-pre-jcl: unpack.vmjar dtfj.interface dtfj dtfjview
-setup-j9jcl-pre-jcl: unpack.vmjar 
-
-unpack.vmjar: 
+setup-j9jcl-pre-jcl: 
 	@echo "----------------------Extract vm.jar and jcl-4-raw.jar ------------"
 	rm -rf $(OUTPUT_ROOT)/j9classes
 	mkdir -p $(OUTPUT_ROOT)/j9classes
@@ -199,37 +196,6 @@ unpack.vmjar:
 	mkdir -p $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
 	cp $(OUTPUT_ROOT)/vm/j9vm_b150/libjvm.so $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
 	cp $(OUTPUT_ROOT)/vm/libjsig.so $(OUTPUT_ROOT)/support/modules_libs/java.base/
-
-dtfj.interface:
-	# generate dtfj.interface.jar
-	find "$(OPENJ9VM_SRC_DIR)/DTFJ Interface/src" -name *.java | grep -v module-info > $(OUTPUT_ROOT)/j9classes/dtfj.interface.log
-	sed -i 's/.*/\"&\"/' $(OUTPUT_ROOT)/j9classes/dtfj.interface.log
-	$(BOOT_JDK)/bin/javac -Xmodule:com.ibm.dtfj -cp $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj @$(OUTPUT_ROOT)/j9classes/dtfj.interface.log
-	rm -rf $(OUTPUT_ROOT)/j9classes/dtfj.interface.log
-
-dtfj:
-	# generate dtfj.jar
-	find "$(OPENJ9VM_SRC_DIR)/DTFJ Core File Support/src" -name *.java > $(OUTPUT_ROOT)/j9classes/dtfj.log
-	find "$(OPENJ9VM_SRC_DIR)/DTFJ J9/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
-	find "$(OPENJ9VM_SRC_DIR)/DTFJ JExtract/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
-	find "$(OPENJ9VM_SRC_DIR)/DTFJ Java Core/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
-	find "$(OPENJ9VM_SRC_DIR)/DTFJ Java Core Reader/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
-	find "$(OPENJ9VM_SRC_DIR)/DTFJ PHD/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
-	find "$(OPENJ9VM_SRC_DIR)/DTFJ_Utils/src" -name *.java >> $(OUTPUT_ROOT)/j9classes/dtfj.log
-	sed -i 's/.*/\"&\"/' $(OUTPUT_ROOT)/j9classes/dtfj.log
-	$(BOOT_JDK)/bin/javac -cp $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/recordio.jar:$(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/ibmjzos.jar:$(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/:$(OPENJ9VM_SRC_DIR)/sourcetools/lib/java9_dtfjview.jar -Xmodule:com.ibm.dtfj -XaddExports:java.base/jdk.internal.module=com.ibm.dtfj -XaddExports:java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED,com.ibm.dtfj -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj @$(OUTPUT_ROOT)/j9classes/dtfj.log
-	rm -rf $(OUTPUT_ROOT)/j9classes/dtfj.log
-
-dtfjview:
-	cp $(OUTPUT_ROOT)/vm/jcl/src/com.ibm.dtfj/module-info.java $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/
-	rm -rf $(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/META-INF
-	#generate dtfjview.jar
-	find "$(OPENJ9VM_SRC_DIR)/DTFJ View/src" -name *.java > $(OUTPUT_ROOT)/j9classes/dtfjview.log
-	sed -i 's/.*/\"&\"/' $(OUTPUT_ROOT)/j9classes/dtfjview.log
-	$(BOOT_JDK)/bin/javac -cp $(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/recordio.jar:$(OUTPUT_ROOT)/j9classes/com.ibm.dtfj/ -Xmodule:com.ibm.dtfjview -XaddExports:com.ibm.dtfjview/com.ibm.java.diagnostics.utils.plugins=ALL-UNNAMED,com.ibm.dtfjview -d $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview @$(OUTPUT_ROOT)/j9classes/dtfjview.log
-	cp $(OUTPUT_ROOT)/vm/jcl/src/com.ibm.dtfjview/module-info.java $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview/
-	rm -rf $(OUTPUT_ROOT)/j9classes/com.ibm.dtfjview/META-INF
-	rm -rf $(OUTPUT_ROOT)/j9classes/META-INF
 
 compose-buildjvm:
 	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(OUTPUT_ROOT)/jdk/lib/
@@ -247,7 +213,6 @@ compose-buildjvm:
 	cp $(OUTPUT_ROOT)/vm/classlib.properties $(OUTPUT_ROOT)/jdk/lib/compressedrefs
 
 J9_LIST := java.base jdk.attach java.logging java.management
-XXJ9_SPECIFIC := com.ibm.management com.ibm.dtfj com.ibm.dtfjview
 J9_SPECIFIC := com.ibm.management 
 OPENJ9_IMAGE_DIR:=jdk
 
