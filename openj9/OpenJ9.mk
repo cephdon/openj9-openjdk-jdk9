@@ -133,6 +133,7 @@ stage-j9:
 	cp -r $(OPENJ9VM_SRC_DIR)/buildspecs $(OUTPUT_ROOT)/vm
 	@sed -i -e 's/, com.ibm.sharedclasses//g' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@sed -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
+	@sed -i -e '/com.ibm.cuda/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@sed -i -e '/dtfj/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@sed -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.management/module-info.java'
 	mkdir $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib
@@ -175,8 +176,7 @@ run-preprocessors-j9: stage-j9
 	sed -i -e 's/gcc-4.6/gcc/g' $(OUTPUT_ROOT)/vm/makelib/mkconstants.mk
 	sed -i -e 's/O3 -fno-strict-aliasing/O0 -Wno-format -Wno-unused-result -fno-strict-aliasing -fno-stack-protector/g' $(OUTPUT_ROOT)/vm/makelib/targets.mk
 	(cd $(OUTPUT_ROOT)/vm/jcl/ && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.8 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
-	(cd $(OUTPUT_ROOT)/vm/jcl/ && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.9 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
-	$(MAKE) $(MAKEFLAGS) -f $(OUTPUT_ROOT)/vm/jcl/jcl_build.mk IBMJZOS_JAR=$(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/ibmjzos.jar SPEC_LEVEL=1.9 JPP_CONFIG=SIDECAR19-SE BUILD_ID=$(shell date +'%N') COMPILER_BCP=sun190 JPP_DIRNAME=jclSC19 JAVA_BIN=$(BOOT_JDK)/bin/ BUILD_ROOT=$(OUTPUT_ROOT)/vm NVCC=/usr/local/cuda-5.5/bin/nvcc WORKSPACE=$(OUTPUT_ROOT)/vm 
+	$(MAKE) $(MAKEFLAGS) -f $(OUTPUT_ROOT)/vm/jcl/jcl_build.mk IBMJZOS_JAR=$(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/ibmjzos.jar SPEC_LEVEL=1.9 JPP_CONFIG=SIDECAR19-SE BUILD_ID=$(shell date +'%N') COMPILER_BCP=sun190 JPP_DIRNAME=jclSC19 JAVA_BIN=$(BOOT_JDK)/bin/ BUILD_ROOT=$(OUTPUT_ROOT)/vm NVCC=/usr/local/cuda/bin/nvcc WORKSPACE=$(OUTPUT_ROOT)/vm 
 	@echo "---------------- Finished OpenJ9 preprocessors ------------------------"
 
 compile-j9: run-preprocessors-j9 
@@ -188,7 +188,6 @@ setup-j9jcl-pre-jcl:
 	@echo "----------------------Extract vm.jar and jcl-4-raw.jar ------------"
 	rm -rf $(OUTPUT_ROOT)/j9classes
 	mkdir -p $(OUTPUT_ROOT)/j9classes
-	unzip -qo "$(OUTPUT_ROOT)/vm/jcl/cuda4j_j9_modular.jar" -d $(OUTPUT_ROOT)/j9classes
 	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC19/classes-vm.zip -d $(OUTPUT_ROOT)/j9classes
 	unzip -qo $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jcl-4-raw.jar -d $(OUTPUT_ROOT)/j9classes/java.base
 	mkdir -p $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
