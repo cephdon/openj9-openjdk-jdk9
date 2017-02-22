@@ -127,8 +127,8 @@ stage-j9:
 	mkdir $(OUTPUT_ROOT)/vm
 	# actions required to hammer j9vm repo into the 'source.zip' shape
 	cp -r $(OPENJ9VM_SRC_DIR)/* $(OUTPUT_ROOT)/vm
-	cp -r $(OUTPUT_ROOT)/vm/VM_Common/* $(OUTPUT_ROOT)/vm
-	rm -rf $(OUTPUT_ROOT)/vm/VM_Common
+	cp -r $(OUTPUT_ROOT)/vm/runtime/* $(OUTPUT_ROOT)/vm
+	rm -rf $(OUTPUT_ROOT)/vm/runtime
 	cp -r $(OPENJ9VM_SRC_DIR)/../tooling/VM_Build-Tools/* $(OUTPUT_ROOT)/vm
 	cp -r $(OPENJ9VM_SRC_DIR)/buildspecs $(OUTPUT_ROOT)/vm
 	@sed -i -e 's/, com.ibm.sharedclasses//g' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
