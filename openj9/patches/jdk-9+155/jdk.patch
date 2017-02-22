@@ -13,7 +13,7 @@ diff --git a/make/copy/Copy-java.base.gmk b/make/copy/Copy-java.base.gmk
  $(INCLUDE_DST_OS_DIR)/%.h: \
      $(JDK_TOPDIR)/src/java.base/$(OPENJDK_TARGET_OS_EXPORT_DIR)/native/include/%.h
  	$(call install-file)
-+$(INCLUDE_DST_DIR)/jvmti.h: $(SRC_ROOT)/j9vm/VM_Common/include/jvmti.h
++$(INCLUDE_DST_DIR)/jvmti.h: $(SRC_ROOT)/j9vm/runtime/include/jvmti.h
 +	$(call install-file)
  
  ################################################################################
