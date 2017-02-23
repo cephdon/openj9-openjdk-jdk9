@@ -10,6 +10,17 @@ else
 	$(error Missing OpenJDK SPEC file! Run configure first!)
 endif
 
+ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-x64)
+        export J9_PLATFORM=linux_x86-64
+else ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-ppc64le)
+        export J9_PLATFORM=linux_ppc-64_le
+else ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-s390x)
+        export J9_PLATFORM=linux_390-64
+else
+        $(error "Unsupported platform, contact support team: $(OPENJDK_TARGET_BUNDLE_PLATFORM)")
+endif
+$(info J9_PLATFORM set to $(J9_PLATFORM))
+
 HGTAG_FILE := $(shell find $(ROOT_DIR) -name .hgtags)
 #$(info HGTAG_FILE = $(HGTAG_FILE))
 
@@ -169,7 +180,7 @@ run-preprocessors-j9: stage-j9
 	@echo "---------------- Running OpenJ9 preprocessors ------------------------"
 	cd $(OUTPUT_ROOT)/vm
 	$(BOOT_JDK)/bin/javac $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/src/com/ibm/moduletools/ModuleInfoMerger.java -d $(OUTPUT_ROOT)/vm/sourcetools/lib
-	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=linux_x86-64 JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" tools)
+	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=$(J9_PLATFORM) JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" tools)
 	$(eval J9VM_SHA=$(shell git -C $(OPENJ9VM_SRC_DIR) rev-parse --short HEAD))
 	@sed -i -e 's/developer.compile/$(J9VM_SHA)/g' $(OUTPUT_ROOT)/vm/include/j9version.h
 	@echo J9VM version string set to : $(J9VM_SHA)
