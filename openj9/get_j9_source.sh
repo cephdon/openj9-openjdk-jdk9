@@ -58,7 +58,7 @@ do
 		;;
 
 		-omr-repo=* )
-		j9repo[omr]="${i#*=}"
+		j9repos[omr]="${i#*=}"
 		;;
 
 		-omr-branch=* )
