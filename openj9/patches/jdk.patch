@@ -13,7 +13,7 @@ diff --git a/make/copy/Copy-java.base.gmk b/make/copy/Copy-java.base.gmk
  $(INCLUDE_DST_OS_DIR)/%.h: \
      $(JDK_TOPDIR)/src/java.base/$(OPENJDK_TARGET_OS_EXPORT_DIR)/native/include/%.h
  	$(call install-file)
-+$(INCLUDE_DST_DIR)/jvmti.h: $(SRC_ROOT)/j9vm/VM_Common/include/jvmti.h
++$(INCLUDE_DST_DIR)/jvmti.h: $(SRC_ROOT)/j9vm/runtime/include/jvmti.h
 +	$(call install-file)
  
  ################################################################################
@@ -40,7 +40,7 @@ diff --git a/src/java.base/share/classes/module-info.java b/src/java.base/share/
      exports jdk.internal.org.objectweb.asm.tree to
          jdk.jlink;
      exports jdk.internal.org.objectweb.asm.util to
-@@ -175,8 +174,7 @@
+@@ -172,8 +171,7 @@
          jdk.net,
          jdk.scripting.nashorn,
          jdk.scripting.nashorn.shell,
@@ -50,7 +50,7 @@ diff --git a/src/java.base/share/classes/module-info.java b/src/java.base/share/
      exports jdk.internal.perf to
          java.desktop,
          java.management,
-@@ -192,8 +190,7 @@
+@@ -190,8 +190,7 @@
          jdk.scripting.nashorn,
          jdk.unsupported;
      exports jdk.internal.vm.annotation to
@@ -89,11 +89,12 @@ diff --git a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/Genera
 diff --git a/src/jdk.jlink/share/classes/module-info.java b/src/jdk.jlink/share/classes/module-info.java
 --- a/src/jdk.jlink/share/classes/module-info.java
 +++ b/src/jdk.jlink/share/classes/module-info.java
-@@ -45,7 +45,6 @@
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.DefaultCompressPlugin;
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ExcludeVMPlugin;
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.IncludeLocalesPlugin;
--    provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.GenerateJLIClassesPlugin;
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ReleaseInfoPlugin;
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ClassForNamePlugin;
+@@ -45,7 +45,6 @@ module jdk.jlink {
+         jdk.tools.jlink.internal.plugins.DefaultCompressPlugin,
+         jdk.tools.jlink.internal.plugins.ExcludeVMPlugin,
+         jdk.tools.jlink.internal.plugins.IncludeLocalesPlugin,
+-        jdk.tools.jlink.internal.plugins.GenerateJLIClassesPlugin,
+         jdk.tools.jlink.internal.plugins.ReleaseInfoPlugin,
+         jdk.tools.jlink.internal.plugins.ClassForNamePlugin;
   }
+

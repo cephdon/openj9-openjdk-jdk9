@@ -1,21 +1,21 @@
 diff --git a/common/autoconf/boot-jdk.m4 b/common/autoconf/boot-jdk.m4
 --- a/common/autoconf/boot-jdk.m4
 +++ b/common/autoconf/boot-jdk.m4
-@@ -526,8 +527,8 @@
+@@ -524,8 +524,8 @@
      fi
    fi
  
 -  JMOD="$BUILD_JDK/bin/jmod"
 -  JLINK="$BUILD_JDK/bin/jlink"
-+  JMOD="$BUILD_JDK/bin/jmod -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base -J-Djava.lang.invoke.stringConcat=BC_SB"
-+  JLINK="$BUILD_JDK/bin/jlink -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base -J-Djava.lang.invoke.stringConcat=BC_SB"
++  JMOD="$BUILD_JDK/bin/jmod -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
++  JLINK="$BUILD_JDK/bin/jlink -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
    AC_SUBST(JMOD)
    AC_SUBST(JLINK)
  
 diff --git a/common/autoconf/flags.m4 b/common/autoconf/flags.m4
 --- a/common/autoconf/flags.m4
 +++ b/common/autoconf/flags.m4
-@@ -71,6 +71,19 @@
+@@ -157,6 +157,19 @@
    CXXFLAGS="$EXTRA_CXXFLAGS"
    LDFLAGS="$EXTRA_LDFLAGS"
    CPPFLAGS=""
@@ -35,21 +35,21 @@ diff --git a/common/autoconf/flags.m4 b/common/autoconf/flags.m4
  ])
  
  # Setup the sysroot flags and add them to global CFLAGS and LDFLAGS so
-@@ -1162,6 +1175,10 @@
+@@ -1249,6 +1249,10 @@
      $2JAVA_BASE_LDFLAGS="${$2JAVA_BASE_LDFLAGS} \
-         -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base\$(OPENJDK_$1_CPU_LIBDIR)"
- 
+         -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base"
+
 +    if test "x$with-j9" != x; then
 +      $2JAVA_BASE_LDFLAGS="${$2JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
 +    fi
 +
      if test "x$1" = "xTARGET"; then
-     # On some platforms (mac) the linker warns about non existing -L dirs.
-     # Add server first if available. Linking aginst client does not always produce the same results.
+       # On some platforms (mac) the linker warns about non existing -L dirs.
+       # For any of the variants server, client or minimal, the dir matches the
 diff --git a/common/autoconf/jdk-options.m4 b/common/autoconf/jdk-options.m4
 --- a/common/autoconf/jdk-options.m4
 +++ b/common/autoconf/jdk-options.m4
-@@ -461,7 +483,10 @@
+@@ -458,7 +458,10 @@
    fi
  
    AC_MSG_CHECKING([if the CDS classlist generation should be enabled])
@@ -61,28 +61,10 @@ diff --git a/common/autoconf/jdk-options.m4 b/common/autoconf/jdk-options.m4
      AC_MSG_RESULT([yes, forced])
      ENABLE_GENERATE_CLASSLIST="true"
      if test "x$ENABLE_GENERATE_CLASSLIST_POSSIBLE" = "xfalse"; then
-diff --git a/common/autoconf/source-dirs.m4 b/common/autoconf/source-dirs.m4
---- a/common/autoconf/source-dirs.m4
-+++ b/common/autoconf/source-dirs.m4
-@@ -69,12 +69,12 @@
-   AC_SUBST(BUILD_HOTSPOT)
-   AC_ARG_WITH(import-hotspot, [AS_HELP_STRING([--with-import-hotspot],
-   [import hotspot binaries from this jdk image or hotspot build dist dir instead of building from source])])
--  if test "x$with_import_hotspot" != x; then
-+  if test "x$with_import_hotspot" != x || test "x$with-j9" != x; then
-     CURDIR="$PWD"
-     cd "$with_import_hotspot"
-     HOTSPOT_DIST="`pwd`"
-     cd "$CURDIR"
--    if ! (test -d $HOTSPOT_DIST/lib && test -d $HOTSPOT_DIST/jre/lib); then
-+    if test "x$with-j9" == x && ! (test -d $HOTSPOT_DIST/lib && test -d $HOTSPOT_DIST/jre/lib); then
-       AC_MSG_ERROR([You have to import hotspot from a full jdk image or hotspot build dist dir!])
-     fi
-     AC_MSG_CHECKING([if hotspot should be imported])
 diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
 --- a/common/autoconf/spec.gmk.in
 +++ b/common/autoconf/spec.gmk.in
-@@ -570,8 +570,11 @@
+@@ -568,8 +568,11 @@
  JAVAC_FLAGS?=@JAVAC_FLAGS@
  
  
@@ -95,7 +77,7 @@ diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
  
  # Use ?= as this can be overridden from bootcycle-spec.gmk
  BOOT_JDK_MODULAR ?= @BOOT_JDK_MODULAR@
-@@ -608,6 +611,10 @@
+@@ -606,6 +606,10 @@
    RC_FLAGS:=@RC_FLAGS@
  endif
  
@@ -121,7 +103,7 @@ diff --git a/make/Images.gmk b/make/Images.gmk
 diff --git a/make/Main.gmk b/make/Main.gmk
 --- a/make/Main.gmk
 +++ b/make/Main.gmk
-@@ -233,6 +233,21 @@
+@@ -237,6 +237,21 @@
  
  ALL_TARGETS += $(LAUNCHER_TARGETS)
  
@@ -143,7 +125,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  ################################################################################
  # Build hotspot target
  
-@@ -268,7 +283,7 @@
+@@ -292,7 +292,7 @@
  ################################################################################
  # Jmod targets
  
@@ -152,7 +134,25 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  JMOD_TARGETS := $(addsuffix -jmod, $(JMOD_MODULES))
  
  define DeclareJmodRecipe
-@@ -639,14 +654,14 @@
+@@ -585,7 +600,7 @@
+   generate-exported-symbols: java.base-libs jdk.jdwp.agent-libs
+
+   # Building one JVM variant is enough to start building the other libs
+-  $(LIBS_TARGETS): hotspot-$(JVM_VARIANT_MAIN)-libs
++  $(LIBS_TARGETS): j9vm-build
+
+   $(LAUNCHER_TARGETS): java.base-libs
+
+@@ -659,7 +674,7 @@ 
+   endif
+
+   # Building java.base-jmod requires all of hotspot to be built.
+-  java.base-jmod: hotspot
++  java.base-jmod: j9vm-build
+
+   # Declare dependencies from <module>-jmod to all other module targets
+   # When creating a BUILDJDK, the java compilation has already been done by the
+@@ -685,14 +685,14 @@
    # in java.base-copy) and tzdb.dat (done in java.base-gendata) to the
    # appropriate location otherwise jimage, jlink and jmod won't start. This
    # also applies when creating the buildjdk.
@@ -169,16 +169,33 @@ diff --git a/make/Main.gmk b/make/Main.gmk
        buildtools-modules: create-buildjdk
      else
        # While actually creating the buildjdk, the default deps applies.
-@@ -695,7 +710,7 @@
+@@ -745,14 +760,14 @@
    # populated (java, copy and gendata targets) and the basic libs and launchers
    # have been built.
    exploded-image-optimize: java copy gendata java.base-libs java.base-launchers \
 -      buildtools-modules
 +      buildtools-modules j9vm-build j9vm-merge
- 
+
    bootcycle-images: jdk-image
- 
-@@ -773,7 +788,9 @@
+
+   docs-javadoc: $(GENSRC_TARGETS) rmic
+
+   # The gensrc step for jdk.jdi creates an html file that is used by docs-copy.
+-  docs-copy: hotspot-$(JVM_VARIANT_MAIN)-gensrc jdk.jdi-gensrc
++  docs-copy: jdk.jdi-gensrc
+
+   docs-zip: docs-javadoc docs-copy
+
+@@ -810,7 +825,7 @@ endif
+ # Virtual targets without recipes
+
+ buildtools: buildtools-langtools interim-langtools interim-rmic \
+-    buildtools-jdk buildtools-hotspot
++    buildtools-jdk
+
+ hotspot: $(HOTSPOT_VARIANT_TARGETS) hotspot-jsig
+
+@@ -836,7 +836,9 @@
  
  launchers: $(LAUNCHER_TARGETS)
  
@@ -189,7 +206,16 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  # Explicitly declare dependency for virtual target jdk.jdwp.agent-gensrc which
  # is actually handled by jdk.jdi-gensrc
-@@ -801,6 +818,8 @@
+@@ -853,7 +870,7 @@ $(foreach m, $(LAUNCHER_MODULES), $(eval $m: $m-launchers))
+ $(foreach m, $(ALL_COPY_MODULES), $(eval $m: $m-copy))
+
+ # Building java.base includes building all of hotspot.
+-java.base: hotspot
++java.base: j9vm-build
+
+ demos: demos-jdk
+
+@@ -868,6 +868,8 @@
    exploded-image: exploded-image-optimize
  endif
  
@@ -198,7 +224,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  create-buildjdk: create-buildjdk-copy create-buildjdk-interim-image
  
  mac-bundles: mac-bundles-jdk
-@@ -810,7 +829,7 @@
+@@ -877,7 +877,7 @@
  
  # This target builds the product images, e.g. the JRE and JDK image
  # (and possibly other, more specific versions)
@@ -207,7 +233,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  # zip-security is actually a bundle, but for now it needs to be considered
  # an image until this can be cleaned up properly.
-@@ -834,9 +853,12 @@
+@@ -904,9 +904,12 @@
  docs-image: docs-javadoc docs-copy
  
  # This target builds the test image
@@ -222,7 +248,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  # all-images builds all our deliverables as images.
  all-images: product-images test-image docs-image
  
-@@ -859,7 +881,7 @@
+@@ -932,7 +932,7 @@
  images: product-images
  docs: docs-image
  bundles: all-bundles
@@ -234,7 +260,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
 diff --git a/make/common/Modules.gmk b/make/common/Modules.gmk
 --- a/make/common/Modules.gmk
 +++ b/make/common/Modules.gmk
-@@ -62,7 +62,7 @@
+@@ -63,7 +63,7 @@
      jdk.net \
      jdk.sctp \
      jdk.unsupported \
@@ -243,7 +269,7 @@ diff --git a/make/common/Modules.gmk b/make/common/Modules.gmk
      #
  
  # to be deprivileged
-@@ -155,7 +155,6 @@
+@@ -168,7 +168,6 @@
  
  TOP_SRC_DIRS += \
      $(CORBA_TOPDIR)/src \
