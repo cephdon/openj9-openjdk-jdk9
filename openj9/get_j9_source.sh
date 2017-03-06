@@ -82,11 +82,11 @@ do
 		;;
 
 		-jit-repo=* )
-		j9repos[jit]="${i#*=}"
+		j9repos[tr.open]="${i#*=}"
 		;;
 
 		-jit-branch=* )
-		branches[jit]="${i#*=}"
+		branches[tr.open]="${i#*=}"
 		;;
 
 		'--' ) # no more options
