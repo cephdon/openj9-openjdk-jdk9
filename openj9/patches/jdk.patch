@@ -13,7 +13,7 @@ diff --git a/make/copy/Copy-java.base.gmk b/make/copy/Copy-java.base.gmk
  $(INCLUDE_DST_OS_DIR)/%.h: \
      $(JDK_TOPDIR)/src/java.base/$(OPENJDK_TARGET_OS_EXPORT_DIR)/native/include/%.h
  	$(call install-file)
-+$(INCLUDE_DST_DIR)/jvmti.h: $(SRC_ROOT)/j9vm/VM_Common/include/jvmti.h
++$(INCLUDE_DST_DIR)/jvmti.h: $(SRC_ROOT)/j9vm/runtime/include/jvmti.h
 +	$(call install-file)
  
  ################################################################################
@@ -30,32 +30,32 @@ diff --git a/make/gendata/GendataBlacklistedCerts.gmk b/make/gendata/GendataBlac
 diff --git a/src/java.base/share/classes/module-info.java b/src/java.base/share/classes/module-info.java
 --- a/src/java.base/share/classes/module-info.java
 +++ b/src/java.base/share/classes/module-info.java
-@@ -133,8 +133,7 @@
+@@ -135,8 +135,7 @@
      exports jdk.internal.org.objectweb.asm to
          jdk.jartool,
          jdk.jlink,
 -        jdk.scripting.nashorn,
--        jdk.vm.ci;
+-        jdk.internal.vm.ci;
 +        jdk.scripting.nashorn;
      exports jdk.internal.org.objectweb.asm.tree to
          jdk.jlink;
      exports jdk.internal.org.objectweb.asm.util to
-@@ -175,8 +174,7 @@
+@@ -174,8 +173,7 @@
          jdk.net,
          jdk.scripting.nashorn,
          jdk.scripting.nashorn.shell,
 -        jdk.unsupported,
--        jdk.vm.ci;
+-        jdk.internal.vm.ci;
 +        jdk.unsupported;
      exports jdk.internal.perf to
          java.desktop,
          java.management,
-@@ -192,8 +190,7 @@
+@@ -192,8 +191,7 @@
          jdk.scripting.nashorn,
          jdk.unsupported;
      exports jdk.internal.vm.annotation to
 -        jdk.unsupported,
--        jdk.vm.ci;
+-        jdk.internal.vm.ci;
 +        jdk.unsupported;
      exports jdk.internal.util.jar to
          jdk.jartool,
@@ -77,7 +77,7 @@ diff --git a/src/java.base/unix/conf/amd64/jvm.cfg b/src/java.base/unix/conf/amd
 diff --git a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
 --- a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
 +++ b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/GenerateJLIClassesPlugin.java
-@@ -90,7 +90,7 @@
+@@ -102,7 +102,7 @@
  
      @Override
      public Set<State> getState() {
@@ -89,11 +89,12 @@ diff --git a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/Genera
 diff --git a/src/jdk.jlink/share/classes/module-info.java b/src/jdk.jlink/share/classes/module-info.java
 --- a/src/jdk.jlink/share/classes/module-info.java
 +++ b/src/jdk.jlink/share/classes/module-info.java
-@@ -45,7 +45,6 @@
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.DefaultCompressPlugin;
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ExcludeVMPlugin;
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.IncludeLocalesPlugin;
--    provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.GenerateJLIClassesPlugin;
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ReleaseInfoPlugin;
-     provides jdk.tools.jlink.plugin.Plugin with jdk.tools.jlink.internal.plugins.ClassForNamePlugin;
+@@ -45,7 +45,6 @@ module jdk.jlink {
+         jdk.tools.jlink.internal.plugins.DefaultCompressPlugin,
+         jdk.tools.jlink.internal.plugins.ExcludeVMPlugin,
+         jdk.tools.jlink.internal.plugins.IncludeLocalesPlugin,
+-        jdk.tools.jlink.internal.plugins.GenerateJLIClassesPlugin,
+         jdk.tools.jlink.internal.plugins.ReleaseInfoPlugin,
+         jdk.tools.jlink.internal.plugins.ClassForNamePlugin;
   }
+

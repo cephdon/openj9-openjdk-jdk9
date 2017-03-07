@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -189,7 +189,6 @@ AC_DEFUN_ONCE([HOTSPOT_SETUP_DTRACE],
   else
     AC_MSG_ERROR([Invalid value for --enable-dtrace: $enable_dtrace])
   fi
-  AC_SUBST(INCLUDE_DTRACE)
 ])
 
 ################################################################################
@@ -216,12 +215,12 @@ AC_DEFUN_ONCE([HOTSPOT_ENABLE_DISABLE_AOT],
     # Only enable AOT on linux-X64.
     if test "x$OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU" = "xlinux-x86_64"; then
       if test -e "$HOTSPOT_TOPDIR/src/jdk.aot"; then
-        if test -e "$HOTSPOT_TOPDIR/src/jdk.vm.compiler"; then
+        if test -e "$HOTSPOT_TOPDIR/src/jdk.internal.vm.compiler"; then
           ENABLE_AOT="true"
         else
           ENABLE_AOT="false"
           if test "x$enable_aot" = "xyes"; then
-            AC_MSG_ERROR([Cannot build AOT without hotspot/src/jdk.vm.compiler sources. Remove --enable-aot.])
+            AC_MSG_ERROR([Cannot build AOT without hotspot/src/jdk.internal.vm.compiler sources. Remove --enable-aot.])
           fi
         fi
       else
@@ -328,7 +327,7 @@ AC_DEFUN_ONCE([HOTSPOT_SETUP_JVM_FEATURES],
     JVM_FEATURES_jvmci=""
   fi
 
-  AC_MSG_CHECKING([if jdk.vm.compiler should be built])
+  AC_MSG_CHECKING([if jdk.internal.vm.compiler should be built])
   if HOTSPOT_CHECK_JVM_FEATURE(graal); then
     AC_MSG_RESULT([yes, forced])
     if test "x$JVM_FEATURES_jvmci" != "xjvmci" ; then

@@ -52,7 +52,7 @@ usage() {
 	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9] [... other j9 options]"
 	echo "where:"
 	echo "	-h|--help 				print this help, then exit"
-	echo "	-r|--revision=<tag> 	is one of: jdk-9+148 jdk-9+155"
+	echo "	-r|--revision=<tag> 	is one of: jdk-9+155 jdk-9+159"
 	echo "							[Note: fetch the given revision, otherwise get the latest sources"
 	echo "	-j9|--with-j9 			get the OpenJ9 latest sources "
 	echo " other j9 options (used only with -j9|--with-j9 option): "
@@ -76,7 +76,7 @@ usage() {
 }
 
 j9flag="false"
-hgtag="jdk-9+155"
+hgtag="jdk-9+159"
 
 
 for i in "$@"
@@ -113,7 +113,7 @@ do
 done
 
 # expected OpenJDK tags
-hgtags="jdk-9+148 jdk-9+155"
+hgtags="jdk-9+155 jdk-9+159"
 
 # check if sources loaded
 if [ ${j9flag} = "true" ] ; then
@@ -185,7 +185,7 @@ fi
 # Get clones of all absent nested repositories (harmless if already exist)
 if [ ${j9flag} = "true" ] ; then
         hg pull default
-        patch -p1 < ./openj9/patches/${hgtag}/hgforest.patch
+        patch -p1 < ./openj9/patches/hgforest.patch
 	# clone absent OpenJDK repositories (except hotspot - harmless if already exist)        
 	sh ./common/bin/hgforest.sh --with-j9 clone || exit $?
 
@@ -213,9 +213,9 @@ if [ ${j9flag} = "true" ] ; then
 	# Get clones of OpenJ9 absent repositories
 	bash ./openj9/get_j9_source.sh ${j9_repos_options}
 
-	patch -p1 < ./openj9/patches/${hgtag}/root.patch
+	patch -p1 < ./openj9/patches/root.patch
 	cd jdk
-	patch -p1 < ./../openj9/patches/${hgtag}/jdk.patch
+	patch -p1 < ./../openj9/patches/jdk.patch
         cd ..
 
 else

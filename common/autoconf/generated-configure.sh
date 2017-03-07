@@ -704,7 +704,6 @@ FIXPATH_DETACH_FLAG
 FIXPATH
 BUILD_GTEST
 ENABLE_AOT
-INCLUDE_DTRACE
 GCOV_ENABLED
 ZIP_EXTERNAL_DEBUG_SYMBOLS
 COPY_DEBUG_SYMBOLS
@@ -712,10 +711,8 @@ COMPILE_WITH_DEBUG_SYMBOLS
 CFLAGS_WARNINGS_ARE_ERRORS
 BUILD_CC_DISABLE_WARNING_PREFIX
 DISABLE_WARNING_PREFIX
-HOTSPOT_SET_WARNINGS_AS_ERRORS
 WARNINGS_AS_ERRORS
 COMPILER_SUPPORTS_TARGET_BITS_FLAG
-ZERO_ARCHFLAG
 LDFLAGS_TESTEXE
 LDFLAGS_TESTLIB
 CXXFLAGS_TESTEXE
@@ -884,7 +881,6 @@ BUILD_JDK
 CREATE_BUILDJDK
 JLINK
 JMOD
-BOOT_JDK_BITS
 JAVAC_FLAGS
 BOOT_JDK_MODULAR
 BOOT_JDK_SOURCETARGET
@@ -974,15 +970,12 @@ CANONICAL_TOPDIR
 ORIGINAL_TOPDIR
 TOPDIR
 PATH_SEP
-ZERO_ARCHDEF
 HOTSPOT_BUILD_CPU_DEFINE
 HOTSPOT_BUILD_CPU_ARCH
 HOTSPOT_BUILD_CPU
 HOTSPOT_BUILD_OS_TYPE
 HOTSPOT_BUILD_OS
 OPENJDK_BUILD_BUNDLE_PLATFORM
-OPENJDK_BUILD_CPU_BUNDLE
-OPENJDK_BUILD_OS_BUNDLE
 OPENJDK_BUILD_OS_EXPORT_DIR
 OPENJDK_BUILD_CPU_OSARCH
 OPENJDK_BUILD_CPU_ISADIR
@@ -994,10 +987,7 @@ HOTSPOT_TARGET_CPU
 HOTSPOT_TARGET_OS_TYPE
 HOTSPOT_TARGET_OS
 DEFINE_CROSS_COMPILE_ARCH
-LP64
 OPENJDK_TARGET_BUNDLE_PLATFORM
-OPENJDK_TARGET_CPU_BUNDLE
-OPENJDK_TARGET_OS_BUNDLE
 OPENJDK_TARGET_OS_EXPORT_DIR
 OPENJDK_TARGET_CPU_OSARCH
 OPENJDK_TARGET_CPU_ISADIR
@@ -3818,7 +3808,7 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 # ... then the rest
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -3998,7 +3988,7 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -4273,7 +4263,7 @@ pkgadd_help() {
 
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -4561,7 +4551,7 @@ VALID_JVM_VARIANTS="server client minimal core zero zeroshark custom"
 
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -4841,7 +4831,7 @@ VALID_JVM_VARIANTS="server client minimal core zero zeroshark custom"
 
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -5053,7 +5043,7 @@ TOOLCHAIN_MINIMUM_VERSION_xlc=""
 #
 # $1 = compiler to test (CC or CXX)
 # $2 = human readable name of compiler (C or C++)
-# $3 = list of compiler names to search for
+# $3 = compiler name to search for
 
 
 # Detect the core components of the toolchain, i.e. the compilers (CC and CXX),
@@ -5180,7 +5170,7 @@ VS_SDK_PLATFORM_NAME_2013=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1485508515
+DATE_WHEN_GENERATED=1487934085
 
 ###############################################################################
 #
@@ -15936,18 +15926,14 @@ $as_echo "$COMPILE_TYPE" >&6; }
   OPENJDK_TARGET_BUNDLE_PLATFORM="${OPENJDK_TARGET_OS_BUNDLE}-${OPENJDK_TARGET_CPU_BUNDLE}"
 
 
-
-
   if test "x$OPENJDK_TARGET_CPU_BITS" = x64; then
-    A_LP64="LP64:="
     # -D_LP64=1 is only set on linux and mac. Setting on windows causes diff in
-    # unpack200.exe
+    # unpack200.exe. This variable is used in
+    # FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK_HELPER.
     if test "x$OPENJDK_TARGET_OS" = xlinux || test "x$OPENJDK_TARGET_OS" = xmacosx; then
       OPENJDK_TARGET_ADD_LP64="-D_LP64=1"
     fi
   fi
-  LP64=$A_LP64
-
 
   if test "x$COMPILE_TYPE" = "xcross"; then
     # FIXME: ... or should this include reduced builds..?
@@ -16092,18 +16078,14 @@ $as_echo "$COMPILE_TYPE" >&6; }
   OPENJDK_BUILD_BUNDLE_PLATFORM="${OPENJDK_BUILD_OS_BUNDLE}-${OPENJDK_BUILD_CPU_BUNDLE}"
 
 
-
-
   if test "x$OPENJDK_BUILD_CPU_BITS" = x64; then
-    A_LP64="LP64:="
     # -D_LP64=1 is only set on linux and mac. Setting on windows causes diff in
-    # unpack200.exe
+    # unpack200.exe. This variable is used in
+    # FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK_HELPER.
     if test "x$OPENJDK_BUILD_OS" = xlinux || test "x$OPENJDK_BUILD_OS" = xmacosx; then
       OPENJDK_BUILD_ADD_LP64="-D_LP64=1"
     fi
   fi
-  LP64=$A_LP64
-
 
   if test "x$COMPILE_TYPE" = "xcross"; then
     # FIXME: ... or should this include reduced builds..?
@@ -16170,12 +16152,6 @@ $as_echo "$COMPILE_TYPE" >&6; }
     HOTSPOT_BUILD_CPU_DEFINE=$(echo $OPENJDK_BUILD_CPU | tr a-z A-Z)
   fi
 
-
-
-
-  # ZERO_ARCHDEF is used to enable architecture-specific code.
-  # This is used in legacy hotspot build.
-  ZERO_ARCHDEF="$HOTSPOT_TARGET_CPU_DEFINE"
 
 
 
@@ -17280,7 +17256,7 @@ $as_echo "$as_me: WARNING: Both SYSROOT and --with-sdk-name are set, only SYSROO
     fi
 
     # set SDKROOT too, Xcode tools will pick it up
-    SDKROOT=$SYSROOT
+    SDKROOT="$SYSROOT"
 
   fi
 
@@ -17528,11 +17504,9 @@ $as_echo "$as_me: The path of OUTPUT_ROOT, which resolves as \"$path\", is inval
   CONFIGURESUPPORT_OUTPUTDIR="$OUTPUT_ROOT/configure-support"
   $MKDIR -p "$CONFIGURESUPPORT_OUTPUTDIR"
 
-  SPEC=$OUTPUT_ROOT/spec.gmk
+  SPEC="$OUTPUT_ROOT/spec.gmk"
 
-  CONF_NAME=$CONF_NAME
 
-  OUTPUT_ROOT=$OUTPUT_ROOT
 
 
 
@@ -24117,6 +24091,20 @@ $as_echo "$tool_specified" >&6; }
 
   fi
 
+
+  # Check bash version
+  # Extra [ ] to stop m4 mangling
+   BASH_VER=`$BASH --version | $SED -n  -e 's/^.*bash.*ersion *\([0-9.]*\).*$/\1/ p'`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking bash version" >&5
+$as_echo_n "checking bash version... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $BASH_VER" >&5
+$as_echo "$BASH_VER" >&6; }
+
+  BASH_MAJOR=`$ECHO $BASH_VER | $CUT -d . -f 1`
+  BASH_MINOR=`$ECHO $BASH_VER | $CUT -d . -f 2`
+  if test $BASH_MAJOR -lt 3 || (test $BASH_MAJOR -eq 3 && test $BASH_MINOR -lt 2); then
+    as_fn_error $? "bash version 3.2 or better is required" "$LINENO" 5
+  fi
 
   # Test if bash supports pipefail.
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if bash supports pipefail" >&5
@@ -30730,7 +30718,6 @@ $as_echo "$BOOT_JDK_BITS" >&6; }
 
 
 
-
 # Check whether --with-build-jdk was given.
 if test "${with_build_jdk+set}" = set; then :
   withval=$with_build_jdk;
@@ -33151,10 +33138,9 @@ done
     if test -n "$TOOLCHAIN_PATH"; then
       PATH_save="$PATH"
       PATH="$TOOLCHAIN_PATH"
-      for ac_prog in $SEARCH_LIST
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}$SEARCH_LIST", so it can be a program name with args.
+set dummy ${ac_tool_prefix}$SEARCH_LIST; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_path_TOOLCHAIN_PATH_CC+:} false; then :
@@ -33193,20 +33179,73 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$TOOLCHAIN_PATH_CC" && break
+fi
+if test -z "$ac_cv_path_TOOLCHAIN_PATH_CC"; then
+  ac_pt_TOOLCHAIN_PATH_CC=$TOOLCHAIN_PATH_CC
+  # Extract the first word of "$SEARCH_LIST", so it can be a program name with args.
+set dummy $SEARCH_LIST; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_TOOLCHAIN_PATH_CC+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_TOOLCHAIN_PATH_CC in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_TOOLCHAIN_PATH_CC="$ac_pt_TOOLCHAIN_PATH_CC" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_TOOLCHAIN_PATH_CC="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_TOOLCHAIN_PATH_CC=$ac_cv_path_ac_pt_TOOLCHAIN_PATH_CC
+if test -n "$ac_pt_TOOLCHAIN_PATH_CC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_TOOLCHAIN_PATH_CC" >&5
+$as_echo "$ac_pt_TOOLCHAIN_PATH_CC" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_TOOLCHAIN_PATH_CC" = x; then
+    TOOLCHAIN_PATH_CC=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    TOOLCHAIN_PATH_CC=$ac_pt_TOOLCHAIN_PATH_CC
+  fi
+else
+  TOOLCHAIN_PATH_CC="$ac_cv_path_TOOLCHAIN_PATH_CC"
+fi
 
       CC=$TOOLCHAIN_PATH_CC
       PATH="$PATH_save"
     fi
 
-    # AC_PATH_PROGS can't be run multiple times with the same variable,
+    # AC_PATH_TOOL can't be run multiple times with the same variable,
     # so create a new name for this run.
     if test "x$CC" = x; then
-      for ac_prog in $SEARCH_LIST
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}$SEARCH_LIST", so it can be a program name with args.
+set dummy ${ac_tool_prefix}$SEARCH_LIST; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_path_POTENTIAL_CC+:} false; then :
@@ -33245,8 +33284,62 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$POTENTIAL_CC" && break
+fi
+if test -z "$ac_cv_path_POTENTIAL_CC"; then
+  ac_pt_POTENTIAL_CC=$POTENTIAL_CC
+  # Extract the first word of "$SEARCH_LIST", so it can be a program name with args.
+set dummy $SEARCH_LIST; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_POTENTIAL_CC+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_POTENTIAL_CC in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_POTENTIAL_CC="$ac_pt_POTENTIAL_CC" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_POTENTIAL_CC="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_POTENTIAL_CC=$ac_cv_path_ac_pt_POTENTIAL_CC
+if test -n "$ac_pt_POTENTIAL_CC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_POTENTIAL_CC" >&5
+$as_echo "$ac_pt_POTENTIAL_CC" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_POTENTIAL_CC" = x; then
+    POTENTIAL_CC=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    POTENTIAL_CC=$ac_pt_POTENTIAL_CC
+  fi
+else
+  POTENTIAL_CC="$ac_cv_path_POTENTIAL_CC"
+fi
 
       CC=$POTENTIAL_CC
     fi
@@ -34452,10 +34545,9 @@ done
     if test -n "$TOOLCHAIN_PATH"; then
       PATH_save="$PATH"
       PATH="$TOOLCHAIN_PATH"
-      for ac_prog in $SEARCH_LIST
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}$SEARCH_LIST", so it can be a program name with args.
+set dummy ${ac_tool_prefix}$SEARCH_LIST; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_path_TOOLCHAIN_PATH_CXX+:} false; then :
@@ -34494,20 +34586,73 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$TOOLCHAIN_PATH_CXX" && break
+fi
+if test -z "$ac_cv_path_TOOLCHAIN_PATH_CXX"; then
+  ac_pt_TOOLCHAIN_PATH_CXX=$TOOLCHAIN_PATH_CXX
+  # Extract the first word of "$SEARCH_LIST", so it can be a program name with args.
+set dummy $SEARCH_LIST; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_TOOLCHAIN_PATH_CXX+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_TOOLCHAIN_PATH_CXX in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_TOOLCHAIN_PATH_CXX="$ac_pt_TOOLCHAIN_PATH_CXX" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_TOOLCHAIN_PATH_CXX="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_TOOLCHAIN_PATH_CXX=$ac_cv_path_ac_pt_TOOLCHAIN_PATH_CXX
+if test -n "$ac_pt_TOOLCHAIN_PATH_CXX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_TOOLCHAIN_PATH_CXX" >&5
+$as_echo "$ac_pt_TOOLCHAIN_PATH_CXX" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_TOOLCHAIN_PATH_CXX" = x; then
+    TOOLCHAIN_PATH_CXX=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    TOOLCHAIN_PATH_CXX=$ac_pt_TOOLCHAIN_PATH_CXX
+  fi
+else
+  TOOLCHAIN_PATH_CXX="$ac_cv_path_TOOLCHAIN_PATH_CXX"
+fi
 
       CXX=$TOOLCHAIN_PATH_CXX
       PATH="$PATH_save"
     fi
 
-    # AC_PATH_PROGS can't be run multiple times with the same variable,
+    # AC_PATH_TOOL can't be run multiple times with the same variable,
     # so create a new name for this run.
     if test "x$CXX" = x; then
-      for ac_prog in $SEARCH_LIST
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}$SEARCH_LIST", so it can be a program name with args.
+set dummy ${ac_tool_prefix}$SEARCH_LIST; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_path_POTENTIAL_CXX+:} false; then :
@@ -34546,8 +34691,62 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$POTENTIAL_CXX" && break
+fi
+if test -z "$ac_cv_path_POTENTIAL_CXX"; then
+  ac_pt_POTENTIAL_CXX=$POTENTIAL_CXX
+  # Extract the first word of "$SEARCH_LIST", so it can be a program name with args.
+set dummy $SEARCH_LIST; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_POTENTIAL_CXX+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_POTENTIAL_CXX in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_POTENTIAL_CXX="$ac_pt_POTENTIAL_CXX" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_POTENTIAL_CXX="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_POTENTIAL_CXX=$ac_cv_path_ac_pt_POTENTIAL_CXX
+if test -n "$ac_pt_POTENTIAL_CXX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_POTENTIAL_CXX" >&5
+$as_echo "$ac_pt_POTENTIAL_CXX" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_POTENTIAL_CXX" = x; then
+    POTENTIAL_CXX=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    POTENTIAL_CXX=$ac_pt_POTENTIAL_CXX
+  fi
+else
+  POTENTIAL_CXX="$ac_cv_path_POTENTIAL_CXX"
+fi
 
       CXX=$POTENTIAL_CXX
     fi
@@ -51480,282 +51679,6 @@ OPENJDK_BUILD_LDFLAGS_JDKLIB="${OPENJDK_BUILD_LDFLAGS_JDKLIB} ${OPENJDK_BUILD_JA
 
 
 
-  # Some Zero and Shark settings.
-  # ZERO_ARCHFLAG tells the compiler which mode to build for
-  case "${OPENJDK_TARGET_CPU}" in
-    s390)
-      ZERO_ARCHFLAG="${COMPILER_TARGET_BITS_FLAG}31"
-      ;;
-    *)
-      ZERO_ARCHFLAG="${COMPILER_TARGET_BITS_FLAG}${OPENJDK_TARGET_CPU_BITS}"
-  esac
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # Execute function body
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # Execute function body
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the C compiler supports \"$ZERO_ARCHFLAG\"" >&5
-$as_echo_n "checking if the C compiler supports \"$ZERO_ARCHFLAG\"... " >&6; }
-  supports=yes
-
-  saved_cflags="$CFLAGS"
-  CFLAGS="$CFLAGS $ZERO_ARCHFLAG"
-  ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-int i;
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-else
-  supports=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-  CFLAGS="$saved_cflags"
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $supports" >&5
-$as_echo "$supports" >&6; }
-  if test "x$supports" = "xyes" ; then
-    :
-    C_COMP_SUPPORTS="yes"
-  else
-    :
-    C_COMP_SUPPORTS="no"
-  fi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # Execute function body
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the C++ compiler supports \"$ZERO_ARCHFLAG\"" >&5
-$as_echo_n "checking if the C++ compiler supports \"$ZERO_ARCHFLAG\"... " >&6; }
-  supports=yes
-
-  saved_cxxflags="$CXXFLAGS"
-  CXXFLAGS="$CXXFLAG $ZERO_ARCHFLAG"
-  ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-int i;
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"; then :
-
-else
-  supports=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-  CXXFLAGS="$saved_cxxflags"
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $supports" >&5
-$as_echo "$supports" >&6; }
-  if test "x$supports" = "xyes" ; then
-    :
-    CXX_COMP_SUPPORTS="yes"
-  else
-    :
-    CXX_COMP_SUPPORTS="no"
-  fi
-
-
-
-
-
-
-
-
-
-
-
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if both compilers support \"$ZERO_ARCHFLAG\"" >&5
-$as_echo_n "checking if both compilers support \"$ZERO_ARCHFLAG\"... " >&6; }
-  supports=no
-  if test "x$C_COMP_SUPPORTS" = "xyes" -a "x$CXX_COMP_SUPPORTS" = "xyes"; then supports=yes; fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $supports" >&5
-$as_echo "$supports" >&6; }
-  if test "x$supports" = "xyes" ; then
-    :
-
-  else
-    :
-    ZERO_ARCHFLAG=""
-  fi
-
-
-
-
-
-
-
-
   # Check that the compiler supports -mX (or -qX on AIX) flags
   # Set COMPILER_SUPPORTS_TARGET_BITS_FLAG to 'true' if it does
 
@@ -52053,14 +51976,6 @@ $as_echo "yes (default)" >&6; }
   else
     as_fn_error $? "--enable-warnings-as-errors accepts no argument" "$LINENO" 5
   fi
-
-  if test "x$WARNINGS_AS_ERRORS" = "xfalse"; then
-    # Set legacy hotspot variable
-    HOTSPOT_SET_WARNINGS_AS_ERRORS="WARNINGS_ARE_ERRORS="
-  else
-    HOTSPOT_SET_WARNINGS_AS_ERRORS=""
-  fi
-
 
 
 
@@ -52916,7 +52831,6 @@ $as_echo "yes, dependencies present" >&6; }
   fi
 
 
-
   # Check whether --enable-aot was given.
 if test "${enable_aot+set}" = set; then :
   enableval=$enable_aot;
@@ -52941,12 +52855,12 @@ $as_echo "no, forced" >&6; }
     # Only enable AOT on linux-X64.
     if test "x$OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU" = "xlinux-x86_64"; then
       if test -e "$HOTSPOT_TOPDIR/src/jdk.aot"; then
-        if test -e "$HOTSPOT_TOPDIR/src/jdk.vm.compiler"; then
+        if test -e "$HOTSPOT_TOPDIR/src/jdk.internal.vm.compiler"; then
           ENABLE_AOT="true"
         else
           ENABLE_AOT="false"
           if test "x$enable_aot" = "xyes"; then
-            as_fn_error $? "Cannot build AOT without hotspot/src/jdk.vm.compiler sources. Remove --enable-aot." "$LINENO" 5
+            as_fn_error $? "Cannot build AOT without hotspot/src/jdk.internal.vm.compiler sources. Remove --enable-aot." "$LINENO" 5
           fi
         fi
       else
@@ -63694,12 +63608,14 @@ $as_echo_n "checking for which libpng to use... " >&6; }
   DEFAULT_LIBPNG=bundled
   # if user didn't specify, use DEFAULT_LIBPNG
   if test "x${with_libpng}" = "x"; then
-      with_libpng=${DEFAULT_LIBPNG}
+    with_libpng=${DEFAULT_LIBPNG}
   fi
 
   if test "x${with_libpng}" = "xbundled"; then
-      USE_EXTERNAL_LIBPNG=false
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: bundled" >&5
+    USE_EXTERNAL_LIBPNG=false
+    PNG_CFLAGS=""
+    PNG_LIBS=""
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: bundled" >&5
 $as_echo "bundled" >&6; }
   elif test "x${with_libpng}" = "xsystem"; then
 
@@ -63759,28 +63675,31 @@ fi
 
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-                 LIBPNG_FOUND=no
+                LIBPNG_FOUND=no
 elif test $pkg_failed = untried; then
-	 LIBPNG_FOUND=no
+	LIBPNG_FOUND=no
 else
 	PNG_CFLAGS=$pkg_cv_PNG_CFLAGS
 	PNG_LIBS=$pkg_cv_PNG_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	 LIBPNG_FOUND=yes
+	LIBPNG_FOUND=yes
 fi
-      if test "x${LIBPNG_FOUND}" = "xyes"; then
-          USE_EXTERNAL_LIBPNG=true
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: system" >&5
+    if test "x${LIBPNG_FOUND}" = "xyes"; then
+      # PKG_CHECK_MODULES will set PNG_CFLAGS and PNG_LIBS
+      USE_EXTERNAL_LIBPNG=true
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: system" >&5
 $as_echo "system" >&6; }
-      else
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: system not found" >&5
+    else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: system not found" >&5
 $as_echo "system not found" >&6; }
-          as_fn_error $? "--with-libpng=system specified, but no libpng found!" "$LINENO" 5
-      fi
+      as_fn_error $? "--with-libpng=system specified, but no libpng found!" "$LINENO" 5
+    fi
   else
-      as_fn_error $? "Invalid value of --with-libpng: ${with_libpng}, use 'system' or 'bundled'" "$LINENO" 5
+    as_fn_error $? "Invalid value of --with-libpng: ${with_libpng}, use 'system' or 'bundled'" "$LINENO" 5
   fi
+
+
 
 
 
@@ -63888,11 +63807,13 @@ $as_echo_n "checking for which lcms to use... " >&6; }
   DEFAULT_LCMS=bundled
   # If user didn't specify, use DEFAULT_LCMS
   if test "x${with_lcms}" = "x"; then
-      with_lcms=${DEFAULT_LCMS}
+    with_lcms=${DEFAULT_LCMS}
   fi
 
   if test "x${with_lcms}" = "xbundled"; then
     USE_EXTERNAL_LCMS=false
+    LCMS_CFLAGS=""
+    LCMS_LIBS=""
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: bundled" >&5
 $as_echo "bundled" >&6; }
   elif test "x${with_lcms}" = "xsystem"; then
@@ -63966,6 +63887,7 @@ $as_echo "yes" >&6; }
 	LCMS_FOUND=yes
 fi
     if test "x${LCMS_FOUND}" = "xyes"; then
+      # PKG_CHECK_MODULES will set LCMS_CFLAGS and LCMS_LIBS
       USE_EXTERNAL_LCMS=true
     else
       as_fn_error $? "--with-lcms=system specified, but no lcms found!" "$LINENO" 5
@@ -63973,6 +63895,8 @@ fi
   else
     as_fn_error $? "Invalid value for --with-lcms: ${with_lcms}, use 'system' or 'bundled'" "$LINENO" 5
   fi
+
+
 
 
 
@@ -64667,8 +64591,8 @@ $as_echo "$JVM_FEATURES" >&6; }
     JVM_FEATURES_jvmci=""
   fi
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if jdk.vm.compiler should be built" >&5
-$as_echo_n "checking if jdk.vm.compiler should be built... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if jdk.internal.vm.compiler should be built" >&5
+$as_echo_n "checking if jdk.internal.vm.compiler should be built... " >&6; }
   if   [[ " $JVM_FEATURES " =~ " graal " ]]  ; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes, forced" >&5
 $as_echo "yes, forced" >&6; }
@@ -64768,11 +64692,11 @@ fi
 $as_echo_n "checking if elliptic curve crypto implementation is present... " >&6; }
 
   if test -d "${SRC_ROOT}/jdk/src/jdk.crypto.ec/share/native/libsunec/impl"; then
-    ENABLE_INTREE_EC=yes
+    ENABLE_INTREE_EC=true
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
   else
-    ENABLE_INTREE_EC=no
+    ENABLE_INTREE_EC=false
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
   fi
@@ -66139,25 +66063,25 @@ else
 fi
 
 
-  USE_PRECOMPILED_HEADER=1
+  USE_PRECOMPILED_HEADER=true
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking If precompiled header is enabled" >&5
 $as_echo_n "checking If precompiled header is enabled... " >&6; }
   if test "x$ENABLE_PRECOMPH" = xno; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, forced" >&5
 $as_echo "no, forced" >&6; }
-    USE_PRECOMPILED_HEADER=0
+    USE_PRECOMPILED_HEADER=false
   elif test "x$ICECC" != "x"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, does not work effectively with icecc" >&5
 $as_echo "no, does not work effectively with icecc" >&6; }
-    USE_PRECOMPILED_HEADER=0
+    USE_PRECOMPILED_HEADER=false
   elif test "x$TOOLCHAIN_TYPE" = xsolstudio; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, does not work with Solaris Studio" >&5
 $as_echo "no, does not work with Solaris Studio" >&6; }
-    USE_PRECOMPILED_HEADER=0
+    USE_PRECOMPILED_HEADER=false
   elif test "x$TOOLCHAIN_TYPE" = xxlc; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, does not work with xlc" >&5
 $as_echo "no, does not work with xlc" >&6; }
-    USE_PRECOMPILED_HEADER=0
+    USE_PRECOMPILED_HEADER=false
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -66171,7 +66095,7 @@ $as_echo_n "checking that precompiled headers work... " >&6; }
       echo "int alfa();" > conftest.h
       $CXX -x c++-header conftest.h -o conftest.hpp.gch 2>&5 >&5
       if test ! -f conftest.hpp.gch; then
-        USE_PRECOMPILED_HEADER=0
+        USE_PRECOMPILED_HEADER=false
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
       else
@@ -66458,7 +66382,7 @@ $as_echo "$as_me: WARNING: --with-ccache-dir has no meaning when ccache is not e
         as_fn_error $? "On macosx, ccache 3.2 or later is required, found $CCACHE_VERSION" "$LINENO" 5
       fi
     fi
-    if test "x$USE_PRECOMPILED_HEADER" = "x1"; then
+    if test "x$USE_PRECOMPILED_HEADER" = "xtrue"; then
       HAS_BAD_CCACHE=`$ECHO $CCACHE_VERSION | \
           $GREP -e '^1.*' -e '^2.*' -e '^3\.0.*' -e '^3\.1\.[0123]$'`
       if test "x$HAS_BAD_CCACHE" != "x"; then

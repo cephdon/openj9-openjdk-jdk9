@@ -145,6 +145,7 @@ stage-j9:
 	@sed -i -e 's/, com.ibm.sharedclasses//g' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@sed -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@sed -i -e '/com.ibm.cuda/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
+	@sed -i -e '/openj9.gpu/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@sed -i -e '/dtfj/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@sed -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.management/module-info.java'
 	mkdir $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib
@@ -202,7 +203,7 @@ setup-j9jcl-pre-jcl:
 	unzip -qo $(OUTPUT_ROOT)/vm/build/j9jcl/source/ive/lib/jclSC19/classes-vm.zip -d $(OUTPUT_ROOT)/j9classes
 	unzip -qo $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jcl-4-raw.jar -d $(OUTPUT_ROOT)/j9classes/java.base
 	mkdir -p $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
-	cp $(OUTPUT_ROOT)/vm/j9vm_b150/libjvm.so $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
+	cp $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
 	cp $(OUTPUT_ROOT)/vm/libjsig.so $(OUTPUT_ROOT)/support/modules_libs/java.base/
 
 compose-buildjvm:
@@ -215,8 +216,8 @@ compose-buildjvm:
 	cp -R $(OUTPUT_ROOT)/vm/options.default $(OUTPUT_ROOT)/jdk/lib/
 	cp -R $(OUTPUT_ROOT)/vm/java*properties $(OUTPUT_ROOT)/jdk/lib/
 	mkdir -p $(OUTPUT_ROOT)/jdk/lib/j9vm
-	cp $(OUTPUT_ROOT)/vm/redirector/libjvm_b150.so $(OUTPUT_ROOT)/jdk/lib/j9vm/libjvm.so
-	cp $(OUTPUT_ROOT)/vm/j9vm_b150/libjvm.so $(OUTPUT_ROOT)/jdk/lib/compressedrefs
+	cp $(OUTPUT_ROOT)/vm/redirector/libjvm_b156.so $(OUTPUT_ROOT)/jdk/lib/j9vm/libjvm.so
+	cp $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(OUTPUT_ROOT)/jdk/lib/compressedrefs
 	cp $(OUTPUT_ROOT)/vm/classlib.properties  $(OUTPUT_ROOT)/jdk/lib
 	cp $(OUTPUT_ROOT)/vm/classlib.properties $(OUTPUT_ROOT)/jdk/lib/compressedrefs
 
@@ -242,8 +243,8 @@ compose:
 	cp -R $(OUTPUT_ROOT)/vm/options.default $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
 	cp -R $(OUTPUT_ROOT)/vm/java*properties $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/
 	mkdir -p $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/j9vm
-	cp $(OUTPUT_ROOT)/vm/redirector/libjvm_b150.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/j9vm/libjvm.so
-	cp $(OUTPUT_ROOT)/vm/j9vm_b150/libjvm.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/compressedrefs
+	cp $(OUTPUT_ROOT)/vm/redirector/libjvm_b156.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/j9vm/libjvm.so
+	cp $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/compressedrefs
 	cp $(OUTPUT_ROOT)/vm/classlib.properties  $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib
 	cp $(OUTPUT_ROOT)/vm/classlib.properties $(IMAGES_OUTPUTDIR)/$(OPENJ9_IMAGE_DIR)/lib/compressedrefs
 
