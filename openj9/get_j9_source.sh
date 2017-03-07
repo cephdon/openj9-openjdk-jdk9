@@ -1,7 +1,7 @@
 #!/bin/sh
 
 usage() {
-	echo "Usage: $0 [-h|--help] [-j9vm-repo=<j9vm repo url>] [-j9vm-branch=<branch>] [-j9jcl-repo=<j9jcl repo url>] [-j9jcl-branch=<branch>] [... other OpenJ9 repositories and branches options]"
+	echo "Usage: $0 [-h|--help] [-j9vm-repo=<j9vm repo url>] [-j9vm-branch=<branch>] [-j9jcl-repo=<j9jcl repo url>] [-j9jcl-branch=<branch>] [... other OpenJ9 repositories and branches options] [-parallel=<true|false>]"
 	echo "where:"
 	echo "	-h|--help 			print this help, then exit"
 	echo "	-j9vm-repo			the OpenJ9/vm repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/j9vm.git"
@@ -19,6 +19,7 @@ usage() {
 	echo "	-jit-repo			the OpenJ9/jit repository url: git002@gitlab-polyglot.hursley.ibm.com:jit/tr.open.git"
 	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git "
 	echo "	-jit-branch			the OpenJ9/jit git branch: java-master "
+	echo "	-parallel			(boolean) if 'true' then the clone j9 repository commands run in parallel, default is false"
 	echo " "
 	exit 1
 }
@@ -37,6 +38,7 @@ declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master 
 declare -A commands
 
 ostype=`uname -s`
+pflag="false"
 
 for i in "$@"
 do
@@ -87,6 +89,10 @@ do
 
 		-jit-branch=* )
 		branches[tr.open]="${i#*=}"
+		;;
+
+		-parallel=* )
+		pflag="${i#*=}"
 		;;
 
 		'--' ) # no more options
@@ -143,17 +149,22 @@ for i in "${!default_j9repos[@]}" ; do
 	git_clone_command="${git} clone --recursive -b ${branch} ${git_url} ${i}"
 	commands[$i]=${git_clone_command}
 
-	# run git clone in parallel 
-	( ${git_clone_command} ; echo "$?" > /tmp/${i}.pid.rc ) 2>&1 &
+	if [ ${pflag} = "true" ] ; then
+		# run git clone in parallel 
+		( ${git_clone_command} ; echo "$?" > /tmp/${i}.pid.rc ) 2>&1 &
+	else
+		${git_clone_command}
+	fi 
 done
 
-
-# Wait for all subprocesses to complete
-wait
+if [ ${pflag} = "true" ] ; then
+	# Wait for all subprocesses to complete
+	wait
+fi
 
 END_TIME=`date +%s`
 echo "[ $(date +%F) $(date +%T)] OpenJ9 clone repositories finished in $(($END_TIME - $START_TIME)) seconds"
-
+	
 for i in "${!default_j9repos[@]}" ; do
 	if [ -e /tmp/${i}.pid.rc ]; then 
 		rc=`cat /tmp/${i}.pid.rc | tr -d ' \n\r'`
@@ -162,14 +173,15 @@ for i in "${!default_j9repos[@]}" ; do
 			echo "ERROR: repository ${i} exited abnormally!"
 			cat /tmp/${i}.pid.rc
 			echo "Re-run: ${commands[$i]}"
-
+			
 			# clean up sources
 			if [ -d ${i} ] ; then
 				rm -fdr ${i}
 			fi
+			
+			# clean up pid file
+			rm -f /tmp/${i}.pid.rc
+			exit 1
 		fi
-
-		# clean up pid file
-		rm -f /tmp/${i}.pid.rc
 	fi
 done

@@ -49,7 +49,7 @@ version_field() {
 }
 
 usage() {
-	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9] [... other j9 options]"
+	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9] [... other j9 options] [-parallel=<true|false>]"
 	echo "where:"
 	echo "	-h|--help 				print this help, then exit"
 	echo "	-r|--revision=<tag> 	is one of: jdk-9+155 jdk-9+159"
@@ -71,6 +71,7 @@ usage() {
 	echo "	-jit-repo				the OpenJ9/jit repository url: git002@gitlab-polyglot.hursley.ibm.com:jit/tr.open.git"
 	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git"
 	echo "	-jit-branch				the OpenJ9/jit git branch: java-master"
+	echo "	-parallel				(boolean) if 'true' then the clone j9 repository commands run in parallel, default is false"
 	echo " "
 	exit 1
 }
@@ -91,7 +92,11 @@ do
 		;;
 
 		-j9vm-repo=* | -j9vm-branch=* | -omr-repo=* | -omr-branch=* | -binaries-repo=* | -binaries-branch=* | -tooling-repo=* | -tooling-branch=* | -jit-repo=* |-jit-branch=* )
-		j9_repos_options="${j9_repos_options} ${i}"
+		j9options="${j9options} ${i}"
+		;;
+
+		-parallel=* )
+		j9options="${j9options} ${i}"
 		;;
 
 		-r=* | --revision=* )
@@ -211,7 +216,7 @@ if [ ${j9flag} = "true" ] ; then
 	sh ./common/bin/hgforest.sh --with-j9 update -r ${hgtag}
 
 	# Get clones of OpenJ9 absent repositories
-	bash ./openj9/get_j9_source.sh ${j9_repos_options}
+	bash ./openj9/get_j9_source.sh ${j9options}
 
 	patch -p1 < ./openj9/patches/root.patch
 	cd jdk
