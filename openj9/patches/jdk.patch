@@ -97,4 +97,19 @@ diff --git a/src/jdk.jlink/share/classes/module-info.java b/src/jdk.jlink/share/
          jdk.tools.jlink.internal.plugins.ReleaseInfoPlugin,
          jdk.tools.jlink.internal.plugins.ClassForNamePlugin;
   }
+diff --git a/src/jdk.attach/share/classes/module-info.java b/src/jdk.attach/share/classes/module-info.java
+--- a/src/jdk.attach/share/classes/module-info.java
++++ b/src/jdk.attach/share/classes/module-info.java
+@@ -31,11 +31,10 @@
+ module jdk.attach {
+     requires jdk.internal.jvmstat;
+
+     exports com.sun.tools.attach;
+     exports com.sun.tools.attach.spi;
+     exports sun.tools.attach to
+         jdk.jcmd;
+     uses com.sun.tools.attach.spi.AttachProvider;
+-    provides com.sun.tools.attach.spi.AttachProvider with sun.tools.attach.AttachProviderImpl;
+ }
+
 
