@@ -52,7 +52,7 @@ usage() {
 	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9] [... other j9 options] [-parallel=<true|false>]"
 	echo "where:"
 	echo "	-h|--help 				print this help, then exit"
-	echo "	-r|--revision=<tag> 	is one of: jdk-9+155 jdk-9+159"
+	echo "	-r|--revision=<tag> 	is one of: jdk-9+159 jdk-9+160"
 	echo "							[Note: fetch the given revision, otherwise get the latest sources"
 	echo "	-j9|--with-j9 			get the OpenJ9 latest sources "
 	echo " other j9 options (used only with -j9|--with-j9 option): "
@@ -77,7 +77,7 @@ usage() {
 }
 
 j9flag="false"
-hgtag="jdk-9+159"
+hgtag="jdk-9+160"
 
 
 for i in "$@"
@@ -118,7 +118,7 @@ do
 done
 
 # expected OpenJDK tags
-hgtags="jdk-9+155 jdk-9+159"
+hgtags="jdk-9+159 jdk-9+160"
 
 # check if sources loaded
 if [ ${j9flag} = "true" ] ; then
@@ -189,7 +189,7 @@ fi
 
 # Get clones of all absent nested repositories (harmless if already exist)
 if [ ${j9flag} = "true" ] ; then
-        hg pull default
+  #      hg pull default
         patch -p1 < ./openj9/patches/hgforest.patch
 	# clone absent OpenJDK repositories (except hotspot - harmless if already exist)        
 	sh ./common/bin/hgforest.sh --with-j9 clone || exit $?
