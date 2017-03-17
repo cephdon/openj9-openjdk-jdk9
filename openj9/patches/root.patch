@@ -77,7 +77,7 @@ diff --git a/common/autoconf/spec.gmk.in b/common/autoconf/spec.gmk.in
  
  # Use ?= as this can be overridden from bootcycle-spec.gmk
  BOOT_JDK_MODULAR ?= @BOOT_JDK_MODULAR@
-@@ -606,6 +606,10 @@
+@@ -617,6 +621,10 @@
    RC_FLAGS:=@RC_FLAGS@
  endif
  
@@ -134,7 +134,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  JMOD_TARGETS := $(addsuffix -jmod, $(JMOD_MODULES))
  
  define DeclareJmodRecipe
-@@ -606,7 +606,7 @@
+@@ -609,7 +609,7 @@
    generate-exported-symbols: java.base-libs jdk.jdwp.agent-libs
 
    # Building one JVM variant is enough to start building the other libs
@@ -143,7 +143,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
 
    $(LAUNCHER_TARGETS): java.base-libs
 
-@@ -679,7 +680,7 @@ 
+@@ -682,7 +682,7 @@ 
    endif
 
    # Building java.base-jmod requires all of hotspot to be built.
@@ -152,7 +152,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
 
    # Declare dependencies from <module>-jmod to all other module targets
    # When creating a BUILDJDK, the java compilation has already been done by the
-@@ -705,14 +705,14 @@
+@@ -708,14 +708,14 @@
    # in java.base-copy) and tzdb.dat (done in java.base-gendata) to the
    # appropriate location otherwise jimage, jlink and jmod won't start. This
    # also applies when creating the buildjdk.
@@ -169,7 +169,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
        buildtools-modules: create-buildjdk
      else
        # While actually creating the buildjdk, the default deps applies.
-@@ -765,14 +765,14 @@
+@@ -768,14 +768,14 @@
    # populated (java, copy and gendata targets) and the basic libs and launchers
    # have been built.
    exploded-image-optimize: java copy gendata java.base-libs java.base-launchers \
@@ -186,7 +186,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
 
    docs-zip: docs-javadoc docs-copy
 
-@@ -835,7 +835,7 @@ endif
+@@ -838,7 +838,7 @@ endif
  # Virtual targets without recipes
 
  buildtools: buildtools-langtools interim-langtools interim-rmic \
@@ -195,7 +195,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
 
  hotspot: $(HOTSPOT_VARIANT_TARGETS) hotspot-jsig
 
-@@ -861,7 +864,9 @@
+@@ -864,7 +867,9 @@
  
  launchers: $(LAUNCHER_TARGETS)
  
@@ -206,7 +206,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  # Explicitly declare dependency for virtual target jdk.jdwp.agent-gensrc which
  # is actually handled by jdk.jdi-gensrc
-@@ -878,7 +878,7 @@ $(foreach m, $(LAUNCHER_MODULES), $(eval $m: $m-launchers))
+@@ -881,7 +881,7 @@ $(foreach m, $(LAUNCHER_MODULES), $(eval $m: $m-launchers))
  $(foreach m, $(ALL_COPY_MODULES), $(eval $m: $m-copy))
 
  # Building java.base includes building all of hotspot.
@@ -215,7 +215,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
 
  demos: demos-jdk
 
-@@ -893,6 +895,8 @@
+@@ -896,6 +898,8 @@
    exploded-image: exploded-image-optimize
  endif
  
@@ -224,7 +224,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  create-buildjdk: create-buildjdk-copy create-buildjdk-interim-image
  
  mac-bundles: mac-bundles-jdk
-@@ -902,7 +902,7 @@
+@@ -905,7 +905,7 @@
  
  # This target builds the product images, e.g. the JRE and JDK image
  # (and possibly other, more specific versions)
@@ -233,7 +233,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  
  # zip-security is actually a bundle, but for now it needs to be considered
  # an image until this can be cleaned up properly.
-@@ -929,9 +932,12 @@
+@@ -932,9 +935,12 @@
  docs-image: docs-javadoc docs-copy
  
  # This target builds the test image
@@ -248,7 +248,7 @@ diff --git a/make/Main.gmk b/make/Main.gmk
  # all-images builds all our deliverables as images.
  all-images: product-images test-image docs-image
  
-@@ -957,7 +957,7 @@
+@@ -960,7 +960,7 @@
  images: product-images
  docs: docs-image
  bundles: all-bundles
