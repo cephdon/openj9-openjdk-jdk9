@@ -1,14 +1,7 @@
-ROOT_DIR := $(dir $(shell pwd))
-#$(info ROOT_DIR = $(ROOT_DIR))
-
-SPEC_FILE := $(shell find $(ROOT_DIR) -name spec.gmk)
-$(info Using SPEC_FILE = $(SPEC_FILE))
-
-ifdef SPEC_FILE
-	include $(SPEC_FILE)
-else
-	$(error Missing OpenJDK SPEC file! Run configure first!)
+ifeq ($(wildcard $(SPEC)),)
+  $(error OpenJ9.mk needs SPEC set to a proper spec.gmk)
 endif
+include $(SPEC)
 
 ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-x64)
         export J9_PLATFORM=linux_x86-64
@@ -21,49 +14,11 @@ else
 endif
 $(info J9_PLATFORM set to $(J9_PLATFORM))
 
-HGTAG_FILE := $(shell find $(ROOT_DIR) -name .hgtags)
-#$(info HGTAG_FILE = $(HGTAG_FILE))
-
-TAG := $(lastword $(shell tail -n 1 $(HGTAG_FILE)))
-#$(info OpenJDk TAG = $(TAG))
-
-ifdef TAG
-	LEN := $(shell echo $(TAG) | wc -m)
-endif
-#$(info LEN = $(LEN))
-
-ifdef TAG
-ifeq ($(LEN),9)
-	ID := $(shell echo $(TAG) | tail -c 3)
-else
-	ID := $(shell echo $(TAG) | tail -c 4)
-endif
-endif
-
-#$(info ID = $(ID))
-JDK_BUILD = $(shell echo $$(( $(ID) + 1 )))
-#$(info JDK_BUILD = $(JDK_BUILD))
-
-OPENJ9VM_SRC_DIR := $(shell find $(SRC_ROOT) -maxdepth 1 -type d | grep j9vm)
-#$(info OPENJ9VM_SRC_DIR = $(OPENJ9VM_SRC_DIR))
-
-ifndef OPENJ9VM_SRC_DIR
-	$(error Missing OpenJ9 VM sources! Run get_source.sh with j9 option!)
-endif
-
-OPENJ9JIT_SRC_DIR := $(shell find $(SRC_ROOT) -maxdepth 1 -type d | grep tr.open)
-#$(info OPENJ9JIT_SRC_DIR = $(OPENJ9JIT_SRC_DIR))
-
-ifndef OPENJ9JIT_SRC_DIR
-	$(error Missing OpenJ9 tr.open sources! Run get_source.sh with j9 option!)
-endif
-
-OPENJ9OMR_SRC_DIR := $(shell find $(SRC_ROOT) -maxdepth 1 -type d | grep omr)
-#$(info OPENJ9OMR_SRC_DIR = $(OPENJ9OMR_SRC_DIR))
-
-ifndef OPENJ9OMR_SRC_DIR
-	$(error Missing OpenJ9 OMR sources! Run get_source.sh with j9 option!)
-endif
+JDK_BUILD = $(lastword $(subst 9+, ,$(shell hg id | awk '{print $$2}')))
+OPENJ9VM_SRC_DIR := $(SRC_ROOT)/j9vm
+OPENJ9JIT_SRC_DIR := $(SRC_ROOT)/tr.open
+OPENJ9OMR_SRC_DIR := $(SRC_ROOT)/omr
+OPENJ9BINARIES_DIR := $(SRC_ROOT)/binaries
 
 define \n
 
@@ -140,7 +95,11 @@ stage-j9:
 	cp -r $(OPENJ9VM_SRC_DIR)/* $(OUTPUT_ROOT)/vm
 	cp -r $(OUTPUT_ROOT)/vm/runtime/* $(OUTPUT_ROOT)/vm
 	rm -rf $(OUTPUT_ROOT)/vm/runtime
-	cp -r $(OPENJ9VM_SRC_DIR)/../tooling/VM_Build-Tools/* $(OUTPUT_ROOT)/vm
+	mkdir -p $(OUTPUT_ROOT)/vm/buildtools/extract_structures/linux_x86/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/extract_structures $(OUTPUT_ROOT)/vm/buildtools/extract_structures/linux_x86/
+	cp $(OPENJ9BINARIES_DIR)/common/ibm/uma.jar $(OUTPUT_ROOT)/vm/buildtools/
+	cp $(OPENJ9BINARIES_DIR)/common/third/freemarker.jar $(OUTPUT_ROOT)/vm/buildtools/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/j9ddr-autoblob.jar $(OUTPUT_ROOT)/vm/buildtools/
 	cp -r $(OPENJ9VM_SRC_DIR)/buildspecs $(OUTPUT_ROOT)/vm
 	@sed -i -e 's/, com.ibm.sharedclasses//g' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@sed -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
@@ -149,25 +108,25 @@ stage-j9:
 	@sed -i -e '/dtfj/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@sed -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.management/module-info.java'
 	mkdir $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/dbghelp.dll $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/buildutils.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/buildutils.jar
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/awtMessageStrings.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/awtMessageStrings.jar
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/apimarker.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/japt.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/jpp.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/zipit.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/jikesbt.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/TestGen.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/Compiler.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/ibm/indexer.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/junit3.8.2.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/junit.jclbuildtools.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/JUnit.jar
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/xercesImpl.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/dom4j-1.6.1.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/xmlParserAPIs-2.0.2.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/common/third/gnujaxp.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
+	cp $(OPENJ9BINARIES_DIR)/vm/third/dbghelp.dll $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/buildutils.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/buildutils.jar
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/awtMessageStrings.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/awtMessageStrings.jar
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/apimarker.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/japt.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/jpp.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/zipit.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/jikesbt.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/TestGen.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/Compiler.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/vm/ibm/indexer.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/common/third/junit3.8.2.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/
+	cp $(OPENJ9BINARIES_DIR)/common/third/junit.jclbuildtools.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_Build_Tools/lib/JUnit.jar
+	cp $(OPENJ9BINARIES_DIR)/common/third/xercesImpl.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
+	cp $(OPENJ9BINARIES_DIR)/common/third/dom4j-1.6.1.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
+	cp $(OPENJ9BINARIES_DIR)/common/third/xmlParserAPIs-2.0.2.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
+	cp $(OPENJ9BINARIES_DIR)/common/third/gnujaxp.jar $(OUTPUT_ROOT)/vm/sourcetools/lib/
 	mkdir -p $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_buildpath/sun190
-	cp $(OPENJ9VM_SRC_DIR)/../binaries/vm/third/rt-compressed.sun190.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_buildpath/sun190/rt-compressed.jar
+	cp $(OPENJ9BINARIES_DIR)/vm/third/rt-compressed.sun190.jar $(OUTPUT_ROOT)/vm/sourcetools/J9_JCL_buildpath/sun190/rt-compressed.jar
 	# actions required to hammer tr.open repo into the 'source.zip' shape
 	cp -r $(OPENJ9JIT_SRC_DIR)/* $(OUTPUT_ROOT)/vm/tr.source/
 	echo "#define TR_LEVEL_NAME \"`git -C $(OPENJ9JIT_SRC_DIR) describe --tags`\"" > $(OUTPUT_ROOT)/vm/tr.source/jit.version
@@ -188,7 +147,7 @@ run-preprocessors-j9: stage-j9
 	sed -i -e 's/gcc-4.6/gcc/g' $(OUTPUT_ROOT)/vm/makelib/mkconstants.mk
 	sed -i -e 's/O3 -fno-strict-aliasing/O0 -Wno-format -Wno-unused-result -fno-strict-aliasing -fno-stack-protector/g' $(OUTPUT_ROOT)/vm/makelib/targets.mk
 	(cd $(OUTPUT_ROOT)/vm/jcl/ && $(MAKE) -f cuda4j.mk JVM_VERSION=28 SPEC_LEVEL=1.8 BUILD_ID=$(shell date +'%N') BUILD_ROOT=$(OUTPUT_ROOT)/vm JAVA_BIN=$(BOOT_JDK)/bin WORKSPACE=$(OUTPUT_ROOT)/vm)
-	$(MAKE) $(MAKEFLAGS) -f $(OUTPUT_ROOT)/vm/jcl/jcl_build.mk IBMJZOS_JAR=$(OPENJ9VM_SRC_DIR)/../binaries/common/ibm/ibmjzos.jar SPEC_LEVEL=1.9 JPP_CONFIG=SIDECAR19-SE BUILD_ID=$(shell date +'%N') COMPILER_BCP=sun190 JPP_DIRNAME=jclSC19 JAVA_BIN=$(BOOT_JDK)/bin/ BUILD_ROOT=$(OUTPUT_ROOT)/vm NVCC=/usr/local/cuda/bin/nvcc WORKSPACE=$(OUTPUT_ROOT)/vm 
+	$(MAKE) $(MAKEFLAGS) -f $(OUTPUT_ROOT)/vm/jcl/jcl_build.mk IBMJZOS_JAR=$(OPENJ9BINARIES_DIR)/common/ibm/ibmjzos.jar SPEC_LEVEL=1.9 JPP_CONFIG=SIDECAR19-SE BUILD_ID=$(shell date +'%N') COMPILER_BCP=sun190 JPP_DIRNAME=jclSC19 JAVA_BIN=$(BOOT_JDK)/bin/ BUILD_ROOT=$(OUTPUT_ROOT)/vm NVCC=/usr/local/cuda/bin/nvcc WORKSPACE=$(OUTPUT_ROOT)/vm 
 	@echo "---------------- Finished OpenJ9 preprocessors ------------------------"
 
 compile-j9: run-preprocessors-j9 
