@@ -112,13 +112,13 @@ diff --git a/make/Main.gmk b/make/Main.gmk
 +
 +ifeq ($(BUILD_OPENJ9), true)
 +j9vm-compose:
-+	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk compose)
++	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) compose)
 +
 +j9vm-merge:
-+	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk merge_module)
++	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) merge_module)
 +
 +j9vm-build:
-+	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk build-j9)
++	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) build-j9)
 +endif
 +
 +
