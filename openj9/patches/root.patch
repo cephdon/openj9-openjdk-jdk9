@@ -103,7 +103,7 @@ diff --git a/make/Images.gmk b/make/Images.gmk
 diff --git a/make/Main.gmk b/make/Main.gmk
 --- a/make/Main.gmk
 +++ b/make/Main.gmk
-@@ -238,6 +238,21 @@
+@@ -238,6 +241,24 @@
  
  ALL_TARGETS += $(LAUNCHER_TARGETS)
  
@@ -116,6 +116,9 @@ diff --git a/make/Main.gmk b/make/Main.gmk
 +
 +j9vm-merge:
 +	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) merge_module)
++
++generate-j9jcl:
++	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) generate-j9jcl-sources)
 +
 +j9vm-build:
 +	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) build-j9)

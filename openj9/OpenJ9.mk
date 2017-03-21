@@ -83,7 +83,7 @@ NUMCPU := $(shell grep -c ^processor /proc/cpuinfo)
 
 override MAKEFLAGS := -j $(NUMCPU)
 
-.PHONY: clean-j9 clean-j9-dist compose-j9 create-jmod prepare-jmod setup-j9jcl compile-j9 stage-j9 openj9 run-preprocessors-j9 build-j9 setup-j9jcl-pre-jcl merge_module compose compose-buildjvm 
+.PHONY: clean-j9 clean-j9-dist compose-j9 create-jmod prepare-jmod setup-j9jcl compile-j9 stage-j9 openj9 run-preprocessors-j9 build-j9 setup-j9jcl-pre-jcl merge_module compose compose-buildjvm generate-j9jcl-sources
 .NOTPARALLEL:
 build-j9: stage-j9 run-preprocessors-j9 compile-j9 setup-j9jcl-pre-jcl
 
@@ -164,6 +164,12 @@ setup-j9jcl-pre-jcl:
 	mkdir -p $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
 	cp $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
 	cp $(OUTPUT_ROOT)/vm/libjsig.so $(OUTPUT_ROOT)/support/modules_libs/java.base/
+
+generate-j9jcl-sources:
+	$(BOOT_JDK)/bin/java -cp "$(OPENJ9BINARIES_SRC_DIR)/vm/ibm/*:$(OPENJ9BINARIES_SRC_DIR)/common/third/*" com.ibm.jpp.commandline.CommandlineBuilder -verdict -baseDir "" -config "SIDECAR19-SE" -srcRoot "$(OPENJ9VM_SRC_DIR)/jcl" -xml "$(OPENJ9VM_SRC_DIR)/jcl/jpp_configuration.xml" -dest "$(SUPPORT_OUTPUTDIR)/j9jcl_sources" -macro:define "com.ibm.oti.vm.library.version=29;com.ibm.oti.jcl.build=326747" -tag:define "Stream2.5;Stream2.6;" -tag:remove "null;"
+	find $(SUPPORT_OUTPUTDIR)/j9jcl_sources -name module-info.java -exec mv {} {}.extra \;
+	mkdir -p $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
+	cp -rp $(SUPPORT_OUTPUTDIR)/j9jcl_sources/java.base/* $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
 
 compose-buildjvm:
 	cp $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(OUTPUT_ROOT)/jdk/lib/
