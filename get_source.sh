@@ -222,6 +222,49 @@ if [ ${j9flag} = "true" ] ; then
 	cd jdk
 	patch -p1 < ./../openj9/patches/jdk.patch
 	patch -p1 < ./../openj9/patches/jdk/jvmio.patch
+	patch -p1 < ./../openj9/patches/jdk/AbstractStringBuilder.patch
+	patch -p1 < ./../openj9/patches/jdk/AccessController.patch
+	patch -p1 < ./../openj9/patches/jdk/BoundMethodHandle.patch
+	patch -p1 < ./../openj9/patches/jdk/ClassLoader.patch
+	patch -p1 < ./../openj9/patches/jdk/Class.patch
+	patch -p1 < ./../openj9/patches/jdk/DelegatingMethodHandle.patch
+	patch -p1 < ./../openj9/patches/jdk/DirectMethodHandle.patch
+	patch -p1 < ./../openj9/patches/jdk/GenerateJLIClassesHelper.patch
+	patch -p1 < ./../openj9/patches/jdk/Gensrc-java.base.patch
+	patch -p1 < ./../openj9/patches/jdk/InfoFromMemberName.patch
+	patch -p1 < ./../openj9/patches/jdk/InvokerBytecodeGenerator.patch
+	patch -p1 < ./../openj9/patches/jdk/Invokers.patch
+	patch -p1 < ./../openj9/patches/jdk/jvmh.patch
+	patch -p1 < ./../openj9/patches/jdk/LambdaFormBuffer.patch
+	patch -p1 < ./../openj9/patches/jdk/LambdaFormEditor.patch
+	patch -p1 < ./../openj9/patches/jdk/LambdaForm.patch
+	patch -p1 < ./../openj9/patches/jdk/LiveStackFrameInfo.patch
+	patch -p1 < ./../openj9/patches/jdk/LiveStackFrame.patch
+	patch -p1 < ./../openj9/patches/jdk/LocalizedInputStream.patch
+	patch -p1 < ./../openj9/patches/jdk/mapfile-vers.patch
+	patch -p1 < ./../openj9/patches/jdk/MemberName.patch
+	patch -p1 < ./../openj9/patches/jdk/MethodHandleImpl.patch
+	patch -p1 < ./../openj9/patches/jdk/MethodHandleInfo.patch
+	patch -p1 < ./../openj9/patches/jdk/MethodHandleNatives.patch
+	patch -p1 < ./../openj9/patches/jdk/MethodHandleProxies.patch
+	patch -p1 < ./../openj9/patches/jdk/MethodHandles.patch
+	patch -p1 < ./../openj9/patches/jdk/MethodTypeForm.patch
+	patch -p1 < ./../openj9/patches/jdk/Object.patch
+	patch -p1 < ./../openj9/patches/jdk/reorder-x86.patch
+	patch -p1 < ./../openj9/patches/jdk/SecurityManager.patch
+	patch -p1 < ./../openj9/patches/jdk/SimpleMethodHandle.patch
+	patch -p1 < ./../openj9/patches/jdk/StackFrameInfo.patch
+	patch -p1 < ./../openj9/patches/jdk/StackStreamFactory.patch
+	patch -p1 < ./../openj9/patches/jdk/StackTraceElement.patch
+	patch -p1 < ./../openj9/patches/jdk/System.patch
+	patch -p1 < ./../openj9/patches/jdk/Thread.patch
+	patch -p1 < ./../openj9/patches/jdk/Throwable.patch
+	patch -p1 < ./../openj9/patches/jdk/VarForm.patch
+	patch -p1 < ./../openj9/patches/jdk/VarHandleByteArrayBase.patch
+	patch -p1 < ./../openj9/patches/jdk/VarHandleGuards.patch
+	patch -p1 < ./../openj9/patches/jdk/VarHandles.patch
+	patch -p1 < ./../openj9/patches/jdk/verify_stub.patch
+	patch -p1 < ./../openj9/patches/jdk/ZipInitialization.patch
         cd ..
 
 else
