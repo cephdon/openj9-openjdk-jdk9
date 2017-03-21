@@ -221,6 +221,7 @@ if [ ${j9flag} = "true" ] ; then
 	patch -p1 < ./openj9/patches/root.patch
 	cd jdk
 	patch -p1 < ./../openj9/patches/jdk.patch
+	patch -p1 < ./../openj9/patches/jdk/jvmio.patch
         cd ..
 
 else

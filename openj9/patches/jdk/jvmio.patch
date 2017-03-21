@@ -1,0 +1,1485 @@
+diff --git a/src/java.base/share/classes/com/ibm/jvm/io/ConsoleInputStream.java b/src/java.base/share/classes/com/ibm/jvm/io/ConsoleInputStream.java
+new file mode 100644
+--- /dev/null
++++ b/src/java.base/share/classes/com/ibm/jvm/io/ConsoleInputStream.java
+@@ -0,0 +1,381 @@
++/*===========================================================================
++ * Licensed Materials - Property of IBM
++ * "Restricted Materials of IBM"
++ * 
++ * IBM SDK, Java(tm) Technology Edition, v9
++ * (C) Copyright IBM Corp. 1992, 2004. All Rights Reserved
++ *
++ * US Government Users Restricted Rights - Use, duplication or disclosure
++ * restricted by GSA ADP Schedule Contract with IBM Corp.
++ *===========================================================================
++ */
++
++
++/*
++ * ===========================================================================
++ (C) Copyright Sun Microsystems Inc, 1992, 2004. All rights reserved.
++ * ===========================================================================
++ */
++
++
++
++ 
++/* 
++ *
++ * Change activity:
++ *
++ * Reason  Date   Origin   Description
++ * ------  ----   ------   ---------------------------------------------------- 
++ * 052658  160702 pha      Created 
++ * 56662.1 031202 stalleyj Always localize so this works on z/OS 
++ * 087093  050505 cwhite   Convert console.encoding to default (file.encoding)
++ * 093687  050805 cwhite   Correct default console.encoding
++ * 100403  200206 cwhite   fix default console.encoding for z/OS
++ * ===========================================================================
++ * Module Information:
++ *      
++ * DESCRIPTION: 
++ * Wrapper class used on ASCII platforms when the console encoding differs
++ * from the machine's default encoding, particularly Windows.
++ * ===========================================================================
++ */
++
++package com.ibm.jvm.io;
++
++import java.io.*;
++import java.nio.*;
++import java.nio.charset.*;
++import java.security.AccessController;
++import sun.security.action.GetPropertyAction;
++import com.ibm.jvm.io.LocalizedInputStream;                                     /*ibm@100403*/
++
++/**
++ * ConsoleInputStream is a wrapper class used by JVM classes to record
++ * console charater encodings which don't match the system encoding.
++ * Mainly used on Windows and z/OS (when JVM is run in ASCII mode).
++ */
++
++public final class ConsoleInputStream extends FilterInputStream {
++
++    private static final String encoding;                                       /*ibm@87093*/
++                                                                                /*ibm@87093...*/
++    private CharsetDecoder btc = null;
++    private CharsetEncoder ctb = null;
++    /**                                                                         //IBM-console_io
++     * Indicates if conversion is required when reading data                    //IBM-console_io
++     */                                                                         //IBM-console_io
++    private static boolean conversionRequired;                                  //IBM-console_io
++                                                                                //IBM-console_io
++    private ByteBuffer reservedIn = null;
++    private ByteBuffer reservedOut = null;
++    private boolean alreadyClosed = false;
++
++    private static String fileEncoding;
++    private static String consoleEncoding;
++    private static Charset btcInit = null;
++    private static Charset ctbInit = null;
++
++    /* Determine the expected console encoding from the defined system properties,
++     * and setup convertors to convert from console encoding to default encoding,
++     * when they differ.
++     */
++    static {
++        fileEncoding = AccessController.doPrivileged
++                                        (new GetPropertyAction("file.encoding"));
++        consoleEncoding = AccessController.doPrivileged
++                                        (new GetPropertyAction("console.encoding"));
++	if (consoleEncoding == null && LocalizedInputStream.nonASCIIPlatform) { /*ibm@100403...*/
++            consoleEncoding = AccessController.doPrivileged
++				(new GetPropertyAction("ibm.system.encoding"));
++        }                                                                       /*...ibm@100403*/
++        if (consoleEncoding == null) consoleEncoding = fileEncoding;
++        conversionRequired = false;                                             //IBM-console_io
++                                                                                //IBM-console_io
++        if (!consoleEncoding.equals(fileEncoding)) {
++            if ("z/OS".equals(AccessController.doPrivileged(new GetPropertyAction("os.name")))) {
++                if (!Charset.isSupported(consoleEncoding)) consoleEncoding = "IBM1047";
++                if (!Charset.isSupported(fileEncoding)) fileEncoding = "IBM1047";
++            }
++            btcInit = Charset.forName(consoleEncoding);
++            consoleEncoding = btcInit.name();
++            ctbInit = Charset.forName(fileEncoding);
++            fileEncoding = ctbInit.name();
++            if (!consoleEncoding.equals(fileEncoding))
++                conversionRequired = true;                                      //IBM-console_io
++        }
++        
++        encoding = consoleEncoding;
++    }
++                                                                                /*...ibm@87093*/
++    void init() {
++        if (conversionRequired) {
++            btc = btcInit.newDecoder();
++            ctb = ctbInit.newEncoder();
++            btc.onMalformedInput(CodingErrorAction.REPLACE)
++               .onUnmappableCharacter(CodingErrorAction.REPLACE);
++            ctb.onMalformedInput(CodingErrorAction.REPLACE)
++               .onUnmappableCharacter(CodingErrorAction.REPLACE);
++        }
++    }
++
++    /**
++     * Make the constructor private so an instance of this class 
++     * can't be created directly.
++     */
++    private ConsoleInputStream(InputStream in) {                                /*ibm@87093*/
++        super(in);
++    }
++
++    public static void setConversionRequired(boolean value){                    //IBM-console_io
++        conversionRequired=value;                                               //IBM-console_io
++        if (consoleEncoding.equals(fileEncoding)) conversionRequired = false;
++    }                                                                           //IBM-console_io
++                                                                                //IBM-console_io
++    /**
++     * Static method to localise the console input stream
++     * Whenever console encoding matches default encoding simply return the passed
++     * input stream since the data encoding will already be correct.
++     * Otherwise return a ConsoleInputStream so that data read from the console
++     * can be converted to default encoding.
++     * 
++     * Note that when console data is read via an InputStreamReader the reader
++     * calls the getEncoding method to determine console encoding (and thus
++     * selects the appropriate converter). InputStreamReader also calls
++     * getInptuStream to obtain the raw console input stream. This effectively
++     * allows it to bypasses the ConsoleInputStream data convertion.
++     * 
++     * @param in The input stream to be wrapped.
++     * @return   The resulting input stream, which may or may not
++     *           have been wrapped.
++     */
++    public static InputStream localize(InputStream in) {
++        if (consoleEncoding.equals(fileEncoding)) {
++            return in;
++        } else {
++            ConsoleInputStream cis = new ConsoleInputStream(in);
++            cis.init();
++            return cis;
++        }
++    }
++
++    /**
++     * Static method used to extract the encoding of the
++     * input stream if it is a ConsoleInputStream.
++     *
++     * @param  is The input stream to get encoding from.
++     * @return    Our encoding
++     */
++    public static String getEncoding(InputStream is) {
++
++        if (is instanceof ConsoleInputStream) {
++            return ConsoleInputStream.encoding;
++        }
++
++        return null;
++    }
++
++
++    /**
++     * Static method used to extract the input stream inside
++     * of the ConsoleInputStream. The method will take any
++     * kind of input stream so needs to check that "is"
++     * is actually a LocalizedInputStream.
++     * Used by LocalizedInputStream.getInputStream()
++     *
++     * @param  is The input stream to "unwrap".
++     * @return    If "is" is a ConsoleInputStream return the
++     *            input stream held inside of it, else
++     *            return "is".
++     */
++    static InputStream getInputStream(InputStream is) {
++
++        if (is instanceof ConsoleInputStream) {
++            return ((ConsoleInputStream)is).in;
++        }
++
++        return is;
++    }
++
++                                                                                /*ibm@87093...*/
++    public int read() throws IOException {
++        byte b[] = new byte[1];
++        if (read(b) != -1)
++            return b[0] & 0xff;
++        else
++            return -1;
++    }
++
++    public int read(byte b[]) throws IOException {
++        return read(b, 0, b.length);
++    }
++
++    /**
++     * Reads an array of bytes from the input stream, returning the array
++     * converted from console encoding to default encoding, if conversion       //IBM-console_io
++     * is required, else returns the array without doing any conversion.        //IBM-console_io
++     */
++    public int read(byte b[], int off, int len) throws IOException {
++        int count = 0;
++
++        if(conversionRequired){                                                 //IBM-console_io
++            if (null != reservedOut) {
++                int remaining = reservedOut.remaining() > len ? len : reservedOut.remaining();
++                if (reservedOut.remaining() >= len) {
++                    System.arraycopy(reservedOut.array(), reservedOut.position(), b, off, len);
++                    reservedOut.position(reservedOut.position()+len);
++                    if (!reservedOut.hasRemaining()) reservedOut = null;
++                    return len;
++                } else {
++                    System.arraycopy(reservedOut.array(), reservedOut.position(), b, off, reservedOut.remaining());
++                    off += remaining;
++                    len -= remaining;
++                    count = remaining;
++                    reservedOut = null;
++                }
++            }
++            if (alreadyClosed) {
++                if (count > 0) return count;
++                alreadyClosed = false;
++                return -1;
++            }
++            int temp_len = (int)Math.ceil((double)len / ctb.maxBytesPerChar());
++            if (temp_len < ctb.maxBytesPerChar()) temp_len = (int)Math.ceil(ctb.maxBytesPerChar());
++            int temp_off = 0;
++            byte[] temp_b = null;
++            if (null != reservedIn) {
++                int remaining = reservedIn.remaining();
++                temp_len += remaining;
++                temp_b = new byte[temp_len];
++                System.arraycopy(reservedIn.array(), reservedIn.position(), temp_b, 0, remaining);
++                temp_off = remaining;
++                temp_len -= remaining;
++                reservedIn = null;
++            } else {
++                temp_b = new byte[temp_len];
++            }
++            int temp_count = in.read(temp_b, temp_off, temp_len);
++            if (temp_count > 0) {
++                ByteBuffer bb = ByteBuffer.wrap(temp_b, 0, temp_off+temp_count);
++                CharBuffer cb = CharBuffer.allocate(temp_count);
++                CoderResult cr = btc.decode(bb, cb, false);
++                if (cr.isOverflow()) {
++                    while(!cr.isUnderflow()) {
++                        CharBuffer temp_cb = CharBuffer.allocate(cb.limit()*2+1);
++                        cb.limit(cb.position());
++                        cb.position(0);
++                        temp_cb.put(cb);
++                        cb = temp_cb;
++                        cr = btc.decode(bb, cb, false);
++                    }
++                }
++                if (bb.hasRemaining()) {
++                    byte[] ba = new byte[bb.remaining()];
++                    System.arraycopy(temp_b, bb.position(), ba, 0, bb.remaining());
++                    reservedIn = ByteBuffer.wrap(ba);
++                }
++                if (0 == cb.position()) return 0;
++                byte[] ba = new byte[(int)Math.ceil(cb.position()*ctb.maxBytesPerChar())];
++                bb = ByteBuffer.wrap(ba);
++                cb.limit(cb.position());
++                cb.position(0);
++                cr = ctb.encode (cb, bb, false);
++                if (cr.isOverflow()) {
++                    while(!cr.isUnderflow()) {
++                        byte[] temp_ba = new byte[bb.limit() * 2 + 1];
++                        ByteBuffer temp_bb = ByteBuffer.wrap(temp_ba);
++                        bb.limit(bb.position());
++                        bb.position(0);
++                        temp_bb.put(bb);
++                        bb = temp_bb;
++                        cr = btc.decode(bb, cb, false);
++                    }
++                }
++                ba = bb.array();
++                if (bb.position() > len) {
++                    System.arraycopy(ba, 0, b, off, len);
++                    int remaining = bb.position() - len;
++                    byte[] temp_ba = new byte[remaining];
++                    System.arraycopy(ba, len, temp_ba, 0, remaining);
++                    reservedOut = ByteBuffer.wrap(temp_ba);
++                    count += len;
++                } else {
++                    System.arraycopy(ba, 0, b, off, bb.position());
++                    count += bb.position();
++                }
++            } else if (temp_count == -1) {
++                ByteBuffer bb = null == reservedIn ? ByteBuffer.wrap(new byte[0]) : reservedIn;
++                CharBuffer cb  = CharBuffer.allocate(bb.remaining()+1);
++                CoderResult cr = btc.decode(bb, cb, true);
++                if (cr.isOverflow()) {
++                    while(!cr.isUnderflow()) {
++                        CharBuffer temp_cb = CharBuffer.allocate(cb.limit()*2+1);
++                        cb.limit(cb.position());
++                        cb.position(0);
++                        temp_cb.put(cb);
++                        cb = temp_cb;
++                        cr = btc.decode(bb, cb, true);
++                    }
++                }
++                cr = btc.flush(cb);
++                if (cr.isOverflow()) {
++                    while(!cr.isUnderflow()) {
++                        CharBuffer temp_cb = CharBuffer.allocate(cb.limit()*2+1);
++                        cb.limit(cb.position());
++                        cb.position(0);
++                        temp_cb.put(cb);
++                        cb = temp_cb;
++                        cr = btc.flush(cb);
++                    }
++                }
++                cb.limit(cb.position());
++                cb.position(0);
++                byte[] ba = new byte[(int)Math.ceil(cb.position()*ctb.maxBytesPerChar())+1];
++                bb = ByteBuffer.wrap(ba);
++                cr = ctb.encode (cb, bb, true);
++                if (cr.isOverflow()) {
++                    while(!cr.isUnderflow()) {
++                        byte[] temp_ba = new byte[bb.limit() * 2 + 1];
++                        ByteBuffer temp_bb = ByteBuffer.wrap(temp_ba);
++                        bb.limit(bb.position());
++                        bb.position(0);
++                        temp_bb.put(bb);
++                        bb = temp_bb;
++                        cr = ctb.encode(cb, bb, true);
++                    }
++                }
++                cr = ctb.flush(bb);
++                if (cr.isOverflow()) {
++                    while(!cr.isUnderflow()) {
++                        byte[] temp_ba = new byte[bb.limit() * 2 + 1 ];
++                        ByteBuffer temp_bb = ByteBuffer.wrap(temp_ba);
++                        bb.limit(bb.position());
++                        bb.position(0);
++                        temp_bb.put(bb);
++                        bb = temp_bb;
++                        cr = ctb.flush(bb);
++                    }
++                }
++                ba = bb.array();
++                if (bb.position() > len) {
++                    System.arraycopy(ba, 0, b, off, len);
++                    int remaining = bb.position() - len;
++                    byte[] temp_ba = new byte[remaining];
++                    System.arraycopy(ba, len, temp_ba, 0, remaining);
++                    reservedOut = ByteBuffer.wrap(temp_ba);
++                    count += len;
++                } else {
++                    System.arraycopy(ba, 0, b, off, bb.position());
++                    count += bb.position();
++                }
++                if (0 == count) count = -1;
++                btc.reset();
++                ctb.reset();
++                alreadyClosed = -1 != count;
++            }                                                                   //IBM-console_io
++        } else {
++            count = in.read(b, off, len);
++        }
++        return count;
++    }
++                                                                                /*...ibm@87093*/
++}
+diff --git a/src/java.base/share/classes/com/ibm/jvm/io/ConsolePrintStream.java b/src/java.base/share/classes/com/ibm/jvm/io/ConsolePrintStream.java
+new file mode 100644
+--- /dev/null
++++ b/src/java.base/share/classes/com/ibm/jvm/io/ConsolePrintStream.java
+@@ -0,0 +1,463 @@
++/*===========================================================================
++ * Licensed Materials - Property of IBM
++ * "Restricted Materials of IBM"
++ * 
++ * IBM SDK, Java(tm) Technology Edition, v9
++ * (C) Copyright IBM Corp. 1992, 2004. All Rights Reserved
++ *
++ * US Government Users Restricted Rights - Use, duplication or disclosure
++ * restricted by GSA ADP Schedule Contract with IBM Corp.
++ *===========================================================================
++ */
++
++
++/*
++ * ===========================================================================
++ (C) Copyright Sun Microsystems Inc, 1992, 2004. All rights reserved.
++ * ===========================================================================
++ */
++
++
++
++
++/*
++ * Change activity:
++ *
++ * Reason  Date   Origin  Description
++ * ------  ----   ------  ----------------------------------------------------
++ * 009013  030400 hdngmr: NL conversion on System.out & System.err printing.
++ * 042032  090302 kwb:    Use console.encoding
++ * 061638  010703 cwhite  Fix console.encoding for byte arrays + rename
++ * 100403  200206 cwhite  fix default console.encoding for z/OS
++ *
++ * Description:
++ *     Wrapper class to perform NL to line.separator conversion on platforms
++ *     where the line.separator != "\n". Intended for use on System.out and
++ *     System.err .
++ */
++
++package com.ibm.jvm.io;
++
++import java.io.Console;
++import java.io.PrintStream;
++import java.io.OutputStream;
++import java.io.UnsupportedEncodingException;                         //ibm.43032
++import java.security.AccessController;
++import sun.security.action.GetPropertyAction;
++import com.ibm.jvm.io.LocalizedInputStream;                                     /*ibm@100403*/
++
++/**
++ * ConsolePrintStream is a wrapper class used by the JVM to do NL conversion
++ * on print() or println() calls for char, char[], String or Object parameters
++ * (ie.anything which might contain '\n' characters to 'request' line separator
++ * sequences be output).
++ *
++ * Note: the use of '\n' in Strings for this purpose is not encouraged - calls
++ * to println() and/or use of the System property "line.separator" should be
++ * used instead. However, its use in this way is widespread).
++ * The NL coversion will replace any '\n' characters not part of the line
++ * separator string (as defined by the System property "line.separator") in the
++ * input parameter with the line separator string.
++ *
++ * This class contains a localize() method, which may be called (passing an
++ * OutputStream object and, optionally, an autoFlush boolean for the
++ * PrintStream constructor) to obtain a ConsolePrintStream object - if the
++ * current "line.separator" property is equal to "\n", a new PrintStream object
++ * is returned (as no conversion need take place), otherwise a new
++ * ConsolePrintStream object is returned.
++ *
++ * If the System property console.encoding is set, this encoding will be used
++ * for the PrintStream.  This is for use on Windows where the console is often
++ * in a different encoding than the ansi codepage.  console.encoding is set by
++ * the java command (but not by javaw) and may be set or reset by the user
++ * during invocation.
++ *
++ */
++public final class ConsolePrintStream extends PrintStream                       /*ibm@61638*/
++{
++    /**
++     * cache of the System property "line.separator".
++     */
++    private String lineSeparator;
++
++    /**
++     * Index of 1st occurance of '\n' in lineSeparator.
++     */
++    private int lineSeparatorNLIndex;
++                                                                                /*ibm@61638...*/
++    /**
++     * Indicates if conversion is required when writing bytes
++     */
++    private static boolean conversionRequired;
++
++    /**
++     * Wrapped PrintStream object used for all print and write operations
++     */
++    private PrintStream ps;
++                                                                                /*...ibm@61638*/
++
++    /**
++     * Private constuctor with default encoding.  The instance is
++     * created by calls to the static localize() method.
++     */
++    private ConsolePrintStream(OutputStream out, boolean autoFlush,             /*ibm@61638*/
++                                 String lineSep,                                //IBM-console_io
++                                 boolean conversionRequired) {                  //IBM-console_io
++        super(out, autoFlush);
++        ps = new PrintStream(out, autoFlush);                                   /*ibm@61638*/
++        lineSeparator = lineSep;
++        lineSeparatorNLIndex = lineSeparator.indexOf('\n');
++        ConsolePrintStream.conversionRequired = conversionRequired;                            //IBM-console_io
++    }
++
++    public static void setConversionRequired(boolean value){                    //IBM-zos_ebcdic
++	conversionRequired=value;                                               //IBM-zos_ebcdic
++    }                                                                           //IBM-zos_ebcdic
++    //ibm.43032  begin
++    /**
++     * Private constuctor with encoding specified.  The instance is
++     * created by calls to the static localize() method.
++     */
++    private ConsolePrintStream(OutputStream out, boolean autoFlush,             /*ibm@61638*/
++                                 String lineSep, String encoding,               //IBM-console_io
++                                                 boolean conversionRequired)                    //IBM-console_io
++            throws UnsupportedEncodingException {
++        super(out, autoFlush, encoding);
++        ps = new PrintStream(out, autoFlush, encoding);                         /*ibm@61638*/
++        lineSeparator = lineSep;
++        lineSeparatorNLIndex = lineSeparator.indexOf('\n');
++        ConsolePrintStream.conversionRequired = conversionRequired;                           //IBM-console_io
++    }
++    //ibm.43032  end
++
++
++                                                                                /*ibm@61638...*/
++    /**
++     * Write the specified byte to this stream.  If the byte is a newline and
++     * automatic flushing is enabled then the <code>flush</code> method will be
++     * invoked.
++     *
++     * <p> Note that the byte is written as given; to write a character that
++     * will be translated according to the platform's default character
++     * encoding, use the <code>print(char)</code> or <code>println(char)</code>
++     * methods. The exception to this is when console.encoding system property
++     * is defined in which case the byte stream is converted from default
++     * encoding to console.encoding.
++     *
++     * @param  b  The byte to be written
++     * @see #print(char)
++     * @see #println(char)
++     */
++    public void write(int b) {
++        if (conversionRequired) {
++            ps.print((char)b);
++        } else {
++            ps.write(b);
++        }
++    }
++
++    /**
++     * Write <code>len</code> bytes from the specified byte array starting at
++     * offset <code>off</code> to this stream.  If automatic flushing is
++     * enabled then the <code>flush</code> method will be invoked.
++     *
++     * <p> Note that the bytes will be written as given; to write characters
++     * that will be translated according to the platform's default character
++     * encoding, use the <code>print(char)</code> or <code>println(char)</code>
++     * methods. The exception to this is when console.encoding system property
++     * is defined in which case the byte stream is converted from default
++     * encoding to console.encoding.
++     *
++     * @param  buf   A byte array
++     * @param  off   Offset from which to start taking bytes
++     * @param  len   Number of bytes to write
++     */
++    public void write(byte buf[], int off, int len) {
++        if (conversionRequired) {
++            ps.print(new String(buf,off,len)); // String effectively reverse encodes
++                                               // the data to UTF-8 and print will
++                                               // convert to console.encoding.
++                                               // Note: This assumes that buf[] is
++                                               // file.encoding encoded.
++        } else {
++            ps.write(buf,off,len);
++        }
++    }
++    
++    /* Ensure that all public methods of PrintStream are overridden  */
++    /* so that we can forward onto our local PrintStream             */
++    /* This is necessary because our inherited PrintStream methods   */
++    /* will indirectly use the above write methods, resulting in     */
++    /* mangled text output                                           */
++     
++    public boolean checkError() {
++	    return ps.checkError();
++    }
++
++    public void close() {
++        ps.close();
++    }
++
++    public void flush() {
++        ps.flush();
++    }
++
++    public void print(boolean b) {
++        ps.print(b);
++    }
++    
++    public void print(int i) {
++        ps.print(i);
++    }
++
++    public void print(long l) {
++        ps.print(l);
++    }
++
++    public void print(float f) {
++        ps.print(f);
++    }
++
++    public void print(double d) {
++        ps.print(d);
++    }
++
++    public void println() {
++        ps.println();
++    }
++    
++    public void println(boolean x) {
++        ps.println(x);
++    }
++
++    public void println(int x) {
++        ps.println(x);
++    }
++
++    public void println(long x) {
++        ps.println(x);
++    }
++
++    public void println(float x) {
++        ps.println(x);
++    }
++    
++    public void println(double x) {
++        ps.println(x);
++    }
++                                                                                /*...ibm@61638*/
++
++    /**
++     * Call our local (PrintStream) print() method, performing NL
++     * conversion as we do.
++     */
++    public void print(char c) {
++        if (c != '\n') {
++            ps.print(c);                                                        /*ibm@61638*/
++        } else {
++            ps.print(lineSeparator);                                            /*ibm@61638*/
++        }
++    }
++
++    /**
++     * Call our local (PrintStream) print() method, performing NL
++     * conversion as we do.
++     */
++    public void print(char[] s) {
++        ps.print(getNewlinedString(s, false));                                  /*ibm@61638*/
++    }
++
++    /**
++     * Call our local (PrintStream) print() method, performing NL
++     * conversion as we do.
++     */
++    public void print(String s) {
++        ps.print(getNewlinedString(s));                                         /*ibm@61638*/
++    }
++
++    /**
++     * Call our local (PrintStream) print() method, performing NL
++     * conversion as we do.
++     */
++    public void print(Object obj) {
++        ps.print(getNewlinedString(obj));                                       /*ibm@61638*/
++    }
++
++    /**
++     * Call our local (PrintStream) println() method, performing NL
++     * conversion as we do.
++     */
++    public void println(char c) {
++        if (c != '\n') {
++            ps.println(c);                                                      /*ibm@61638*/
++        } else {
++            ps.println(lineSeparator);                                          /*ibm@61638*/
++        }
++    }
++
++    /**
++     * Call our local (PrintStream) println() method, performing NL
++     * conversion as we do.
++     */
++    public void println(char[] s) {
++        ps.println(getNewlinedString(s, false));                                /*ibm@61638*/
++    }
++
++    /**
++     * Call our local (PrintStream) println() method, performing NL
++     * conversion as we do.
++     */
++    public void println(String s) {
++        ps.println(getNewlinedString(s));                                       /*ibm@61638*/
++    }
++
++    /**
++     * Call our local (PrintStream) println() method, performing NL
++     * conversion as we do.
++     */
++    public void println(Object obj) {
++        ps.println(getNewlinedString(obj));                                     /*ibm@61638*/
++    }
++
++    /**
++     * Private method to perform the NL conversion on the String of the object
++     * provided.
++     * @param obj Object whose string is to be NL converted.
++     * @return    Converted string.
++     */
++    private String getNewlinedString(Object obj) {
++        return getNewlinedString(obj, true);
++    }
++
++    /**
++     * Private method to perform the NL conversion on the String of the object
++     * provided.
++     * @param obj           Object whose string is to be NL converted.
++     * @param treatAsObject If obj is a char[], treat it as an Object when
++     *                      obtaining its String.
++     * @return              Converted string.
++     */
++    private String getNewlinedString(Object obj, boolean treatAsObject) {
++        if (obj == null) {
++            return null;
++        }
++
++        String s = ((obj instanceof char[]) && !treatAsObject) ?
++            new String((char[])obj) : String.valueOf(obj);
++
++        if(s == null){                                          /*ibm@28207*/
++            return null;                                        /*ibm@28207*/
++        }                                                       /*ibm@28207*/
++
++        int index = s.indexOf('\n');
++
++        if (index == -1) {
++            return s;
++        }
++
++        char[] c = ((obj instanceof char[]) && !treatAsObject) ?
++            (char[])obj : s.toCharArray();
++        StringBuffer buffer = new StringBuffer(c.length);
++        int oldIndex = 0;
++
++        while (index != -1) {
++            if ((lineSeparatorNLIndex != -1) &&
++                (s.regionMatches(index - lineSeparatorNLIndex, lineSeparator,
++                                 0, lineSeparator.length()))) {
++                index =
++                    index + lineSeparator.length() - lineSeparatorNLIndex - 1;
++            } else {
++                buffer.append(c, oldIndex, index - oldIndex);
++                buffer.append(lineSeparator);
++                oldIndex = index + 1;
++            }
++            index = s.indexOf('\n', index + 1);
++        }
++
++        if (buffer.length() == 0) {
++            return s;
++        }
++
++        if (oldIndex < c.length) {
++            buffer.append(c, oldIndex, c.length - oldIndex);
++        }
++        return buffer.toString();
++    }
++
++    /**
++     * Method to obtain a PrintStream object which will convert '\n' characters
++     * (not part of the line separator string) with the line separator string.
++     *
++     * @param out The output stream to be held in the PrintStream object.
++     * @return    The resulting PrintStream object, which may or may not be an
++     *            instance of ConsolePrintStream.
++     */
++    public static PrintStream localize(OutputStream out) {
++        return localize(out, false);
++    }
++
++    /**
++     * Method to obtain a PrintStream object which will convert '\n' characters
++     * (not part of the line separator string) with the line separator string.
++     *
++     * @param out       The output stream to be held in the PrintStream object.
++     * @param autoFlush boolean second parameter to be passed to the PrintStream
++     *                  constructor.
++     * @return          The resulting PrintStream object, which may or may not
++     *                  be an instance of ConsolePrintStream.
++     */
++    public static PrintStream localize(OutputStream out, boolean autoFlush) {
++        if (out instanceof ConsolePrintStream) {                                /*ibm@61638*/
++            return (PrintStream)out;
++        }
++        boolean conversionRequired;                                             //IBM-console_io
++
++        String lineSep =
++            AccessController.doPrivileged(new GetPropertyAction("line.separator"));
++        //ibm.42032  begin
++        String encoding =
++            AccessController.doPrivileged(new GetPropertyAction("console.encoding"));
++	
++        if (encoding == null && LocalizedInputStream.nonASCIIPlatform) {        /*ibm@100403...*/
++	    encoding = AccessController.doPrivileged
++                            (new GetPropertyAction("ibm.system.encoding"));
++	}                                                                       /*...ibm@100403*/
++
++        if (encoding!=null && encoding.length()==0)
++            encoding = null;
++        
++        String defaultEncoding =                                                /*ibm@061638...*/
++            AccessController.doPrivileged(new GetPropertyAction("file.encoding"));
++        if (encoding == null || encoding.equals(defaultEncoding)) {             //IBM-console_io
++            conversionRequired = false;
++        } else {
++            conversionRequired = true;
++        }                                                                       /*...ibm@061638*/
++
++        if (lineSep.equals("\n")) {
++            if (out instanceof PrintStream) {
++                return (PrintStream)out;
++            } else {
++                if (encoding != null) {
++                    try {
++                        return (PrintStream)new ConsolePrintStream(out, autoFlush, lineSep, encoding,/*ibm@061638*/ //IBM-console_io
++                                                                                            conversionRequired); //IBM-console_io
++                    } catch (Exception e) { }
++                }
++                return new PrintStream(out, autoFlush);
++            }
++        }
++
++        if (encoding != null) {
++            try {
++                return (PrintStream)new ConsolePrintStream(out, autoFlush, lineSep, encoding, /*ibm@061638*/ //IBM-console_io
++                                                                                    conversionRequired); //IBM-console_io
++            } catch (Exception e) { }
++        }
++        //ibm.42032  end
++        return (PrintStream)new ConsolePrintStream(out, autoFlush, lineSep,/*ibm@061638*/ //IBM-console_io
++                                                                   conversionRequired); //IBM-console_io
++    }
++}
++//IBM-zos_ebcdic
++//IBM-console_io
+diff --git a/src/java.base/share/classes/com/ibm/jvm/io/LocalizedInputStream.java b/src/java.base/share/classes/com/ibm/jvm/io/LocalizedInputStream.java
+new file mode 100644
+--- /dev/null
++++ b/src/java.base/share/classes/com/ibm/jvm/io/LocalizedInputStream.java
+@@ -0,0 +1,360 @@
++/*===========================================================================
++ * Licensed Materials - Property of IBM
++ * "Restricted Materials of IBM"
++ * 
++ * IBM SDK, Java(tm) Technology Edition, v9
++ * (C) Copyright IBM Corp. 1992, 2004. All Rights Reserved
++ *
++ * US Government Users Restricted Rights - Use, duplication or disclosure
++ * restricted by GSA ADP Schedule Contract with IBM Corp.
++ *===========================================================================
++ */
++/*
++ * ===========================================================================
++ (C) Copyright Sun Microsystems Inc, 1992, 2004. All rights reserved.
++ * ===========================================================================
++ */
++
++/* 
++ *
++ * Change activity:
++ *
++ * Reason  Date     Origin  Description
++ * ------  ----     ------  ---------------------------------------------------- 
++ *         20060131 cwhite  Original - ported from SDK 5.0
++ * ===========================================================================
++ * Module Information:
++ *      
++ * DESCRIPTION: 
++ * Wrapper class used on non ASCII platforms to convert characters, read from
++ * input streams, from the platform encoding to ASCII (8859_1)
++ * ===========================================================================
++ */
++
++package com.ibm.jvm.io;
++
++import java.io.*;
++import java.nio.*;
++import java.nio.charset.*;
++import java.util.zip.ZipInputStream;
++
++/**
++ * LocalizedInputStream is a wrapper class used by JVM classes which read 
++ * characters from input streams. This is bad practice but something Sun's
++ * code still does! It works fine on ASCII platforms as ASCII characters can
++ * be cast to UNICODE without problem (in nearly all cases) but this
++ * approach will not work on non ASCII platforms.
++ * This class contains a localize method which is passed an InputStream
++ * (normally a FileInputStream). The method first checks to see if it
++ * is being used on as ASCII platform, if so nothing needs to be done. If
++ * not it creates an instance of LocalizedInputStream containing
++ * the original InputStream and returns the new class to the calling
++ * method.
++ */
++
++public final class LocalizedInputStream extends FilterInputStream {
++
++    /**
++     * The convertor used to convert platform characters to ASCII
++     * characters. There is one convertor per LocalizedInputStream
++     * as the getDefault method creates a new instance of the default 
++     * convertor.
++     */
++    private CharsetDecoder btc;
++
++    /**
++     * Static flag used to denote that this class is being executed on
++     * a non ASCII platform. Default value of false (ASCII platform)
++     * which will disable the localize method. It is set once in the static initializer.
++     */
++    public static boolean nonASCIIPlatform = false;
++
++    private static final Class<?> ZipFileInputStreamClass;
++    static {
++                                                                                //IBM-j9zip
++        ZipFileInputStreamClass = ZipInitialization.getZipFileInputStreamClass();  //IBM-j9zip
++    }
++
++    /**
++     * Protect this LocalizedInputStream from being unwrapped by a 
++     * call to getInputStream. This attribute has a specific use,
++     * in the Properties.load method, we may pass a LocalizedInputStream
++     * to the constructor of InputStreamReader (as load does). The constructor
++     * needs to be able to remove any LocalizedInputStreams wrapped around a
++     * supplied InputStream to prevent double conversion but in the load
++     * method we need the double conversion.
++     */
++    private boolean allowUnwrapping = true;
++
++    private byte peekBuffer[] = new byte[1000];
++    private int peekLength, peekOffset;
++
++    static {
++        java.security.AccessController.doPrivileged(
++            new java.security.PrivilegedAction<Object>() {
++                public Object run () {
++                    nonASCIIPlatform = 
++                        !System.getProperty("platform.notASCII", "false").equalsIgnoreCase("false");
++                    return null;
++                }
++            });
++    }
++
++    /**
++     * Make the constructor private so an instance of this class 
++     * can't be created directly.
++     */
++    private LocalizedInputStream(InputStream in) 
++    {
++        super(in);
++    }
++
++    private void btcInit() {
++        boolean foundAscii = false;
++        for (peekLength = 0; peekLength < peekBuffer.length;) {
++            int c;
++            try {
++                if (in.available() == 0) break;
++                c = in.read();
++            } catch (IOException e) {
++                break;
++            }
++            if (c == -1) break;
++            peekBuffer[peekLength++] = (byte)c;
++            /* Do we have an ascii '#', '=' or '\n' ? */
++            if (c == 0x23 || c == 0x3d || c == 0x0a) {
++                foundAscii = true; /* yes, flag as ascii */
++                break;
++            } else {
++                /*  Do we have a EBCDIC NL char ? */
++                if (c == 0x15) break; /* Yes, break as we have ebcdic */
++            }
++        }
++        
++        try {
++            if (foundAscii) {
++                btc = Charset.forName("8859_1").newDecoder();
++            } else {
++                btc = Charset.forName("Cp1047").newDecoder();
++            }
++        } catch (Exception e) {}
++    }
++
++    /**
++     * Returns the number of bytes that can be read from this input
++     * stream without blocking.
++     * <p>
++     * This method adds the number of bytes in the peekBuffer to
++     * the count returned from <code>in.available(n)</code> and
++     * returns the result.
++     *
++     * @return     the number of bytes that can be read from the input stream
++     *             without blocking.
++     * @exception  IOException  if an I/O error occurs.
++     */
++    public int available() throws IOException {
++        return (peekLength - peekOffset) + in.available();
++    }                           
++
++    /**
++     * Read a single byte from the input stream and convert it into 
++     * ASCII (strictly speaking it returns UNICODE but we are
++     * assuming this is the same).
++     *
++     * @return A single ASCII character read from the wrapped input
++     *         stream.
++     */
++    public int read() throws IOException {
++        byte b[] = new byte[1];
++        if (read(b) != -1) {
++            return b[0] & 0xff;
++        } else {
++            return -1;
++        }
++    }
++
++    /**
++     * Fill the supplied byte array with characters read in form
++     * the wrapped input stream. The number of characters to read
++     * is determined by the length of the supplied array.
++     *
++     * @param b The byte array which will receive the read
++     *          characters.
++     * @return  The number of bytes actually read, or -1
++     *          if no more data read because EOF reached.
++     */
++    public int read(byte b[]) throws IOException {
++        return read(b, 0, b.length);
++    }
++
++    /**
++     * Read <code>len</code> bytes into the supplied array, starting 
++     * at <code>off</code> from the wrapped input stream.
++     *
++     * @param b   The byte array which will receive the read
++     *            characters.
++     * @param off The start offset into b to store bytes.
++     * @param len The number of characters to read into b.
++     * @return    The number of bytes actually read, or -1
++     *            if no more data read because EOF reached.
++     */
++    public int read(byte b[], int off, int len) throws IOException {
++        char cbuf[] = new char[len];
++        int index;
++
++        if (btc == null) btcInit();
++
++        int count = peekLength - peekOffset;
++        if (count > 0) {
++            if (count > len) count = len;
++
++            System.arraycopy(peekBuffer, peekOffset, b, off, count);
++            
++            peekOffset += count;
++            if (peekOffset == peekLength) peekBuffer = null;
++
++            if (count < len) {
++                int readCount = in.read(b, off+count, len-count);
++                if (readCount > 0) count += readCount;
++            }
++        } else {
++            count = in.read(b, off, len);
++        }
++               
++        if (count > 0) {
++            btc.reset();
++            ByteBuffer bb = ByteBuffer.wrap(b, off, len);
++            CharBuffer cb = CharBuffer.wrap(cbuf);
++            CoderResult cr = btc.decode(bb, cb, true);
++            cr = btc.flush(cb); 
++
++            for (index=0; index < len; index++) {
++                b[index+off] = (byte)cbuf[index];
++            }
++        }
++
++        return count;
++    }
++
++    /**
++     * Static method used to determine if a LocalizedInputStream 
++     * needs to be wrapped around the supplied InputStream.
++     *
++     * Firstly check if we are running on an ASCII platform,
++     * if so return the given input stream (do nothing).
++     * else check to see if the input stream is a
++     * LocalizedInputStream or a wrapper around a 
++     * LocalizedInputStream (e.g. BufferInputStream) if
++     * so, return the supplied input stream.
++     *
++     * @param in The input stream to be wrapped.
++     * @return   The resulting input stream, which may or may not
++     *           have been wrapped in a LocalizedInputStream
++     */
++    public static InputStream localize(InputStream in) {
++
++        if (nonASCIIPlatform) {
++
++            InputStream i = in;
++
++            /* i should never be null, this is just a 
++             * safety test.
++             */
++            while (i != null) {
++
++                /* If we have found a LocalizedInputStream
++                 * either passed in or inside of a wrapper
++                 * return the original class we were given.
++                 */
++                if (i instanceof LocalizedInputStream) {
++                    break;
++                } else {
++                    /* Is the InputStream a subclass of;
++                     * FilterInputStream
++                     *    If so unwrap the class (get the hidden input stream)
++                     *    and continue.
++                     * FileInputStream
++                     *    If so wrapper it, convert EBCDIC -> ASCII and return.
++                     * ZipInputStream
++                     *    If so don't investigate any further, just return,
++                     *    ZipInputStream is a subclass of FilterInputStream
++                     *    wrapped around a FileInputStream but we don't want
++                     *    to wrap a LocalizedInputStream around it.
++                     */
++
++                    Class<?> c = i.getClass();
++                    while (c != null && 
++                           c != java.io.FileInputStream.class &&
++                           c != ZipInputStream.class &&
++                           c != ZipFileInputStreamClass &&
++                           c != FilterInputStream.class) {
++                        c = c.getSuperclass();
++                    }
++
++                    if (c == FilterInputStream.class) {
++                        i= LocalizedInputStream.unwrap((FilterInputStream)i);
++                    } else if (c == java.io.FileInputStream.class) {
++                        return new LocalizedInputStream(in);
++                    } else if (c == ZipFileInputStreamClass) {
++                        return new LocalizedInputStream(in);
++                    } else {
++                        break;
++                    }
++
++                }
++            }
++        }
++        return in;
++    }
++
++    /**
++     * Static method used to extract the input stream inside
++     * of the LocalizedInputStream. The method will take any
++     * kind of input stream so needs to check that what it is
++     * given is actually a LocalizedInputStream. Created to be
++     * used by InputStreamReader constructor.
++     *
++     * @param lis The input stream to "unwrap".
++     * @return    If lis is a LocalizedInputStream return the
++     *            input stream held inside of it, else
++     *            return lis.
++     */
++    public static InputStream getInputStream(InputStream lis) {
++
++        if (nonASCIIPlatform) {
++            if (lis instanceof LocalizedInputStream && 
++                ((LocalizedInputStream)lis).allowUnwrapping) {
++                return((LocalizedInputStream)lis).in;
++            }
++        }
++
++        return ConsoleInputStream.getInputStream(lis);
++    }
++
++    /**
++     * Prevent getInputStream from unwrapping the given
++     * LocalizedInputStream.
++     *
++     * @param fis FilterInputStream from which the input stream 
++     *            will be extracted.
++     */
++    public static void dontUnwrap(InputStream lis) {
++        if (nonASCIIPlatform &&
++            lis instanceof LocalizedInputStream) {
++            ((LocalizedInputStream)lis).allowUnwrapping = false;
++        }
++    }
++
++    /**
++     * Native method used to tunnel into a FilterInputStream
++     * and return the input stream it contains.
++     *
++     * @param fis FilterInputStream from which the input stream 
++     *            will be extracted.
++     * @return The input stream contained inside of fis.
++     */
++    public static native InputStream unwrap(FilterInputStream fis);             //IBM-zos_ebcdic
++
++}
++
++//IBM-zos_ebcdic
++//IBM-j9zip
+diff --git a/src/java.base/share/classes/com/ibm/jvm/io/LocalizedOutputStream.java b/src/java.base/share/classes/com/ibm/jvm/io/LocalizedOutputStream.java
+new file mode 100644
+--- /dev/null
++++ b/src/java.base/share/classes/com/ibm/jvm/io/LocalizedOutputStream.java
+@@ -0,0 +1,220 @@
++/*===========================================================================
++ * Licensed Materials - Property of IBM
++ * "Restricted Materials of IBM"
++ * 
++ * IBM SDK, Java(tm) Technology Edition, v9
++ * (C) Copyright IBM Corp. 1992, 2004. All Rights Reserved
++ *
++ * US Government Users Restricted Rights - Use, duplication or disclosure
++ * restricted by GSA ADP Schedule Contract with IBM Corp.
++ *===========================================================================
++ */
++
++/*
++ * ===========================================================================
++ (C) Copyright Sun Microsystems Inc, 1992, 2004. All rights reserved.
++ * ===========================================================================
++ */
++
++/* 
++ *
++ * Change activity:
++ *
++ * Reason  Date     Origin  Description
++ * ------  ----     ------  ---------------------------------------------------- 
++ * JSE-821 20070102 cwhite  Original - ported from SDK 5.0
++ * ===========================================================================
++ * Module Information:
++ *      
++ * DESCRIPTION:
++ * Wrapper class used on non ASCII platforms to convert characters, written to
++ * output streams, from ASCII (8859_1) to the platform encoding
++ * ===========================================================================
++ */
++
++package com.ibm.jvm.io;
++
++import java.io.*;
++import java.nio.charset.*;
++import java.nio.*;
++import java.lang.reflect.Field;
++
++
++/**
++ * LocalizedOutputStream is a wrapper class used by JVM classes which write
++ * characters to output streams.
++ * This class contains a localize method which is passed an OutputStream
++ * (normally a FileOutputStream). The method first checks if it
++ * is being used on an ASCII platform, if so nothing needs to be done. If
++ * not it creates an instance of LocalizedOutputStream containing
++ * the original OutputStream and returns the new class to the calling
++ * method.
++ * Currently this is only used by the Properties.store method.
++ */
++
++public final class LocalizedOutputStream extends FilterOutputStream {
++
++    /**
++     * The convertor used to convert ASCII characters to platform
++     * characters.
++     */
++    private CharsetEncoder ctb = Charset.defaultCharset().newEncoder();
++
++    /**
++     * Static flag used to denote that this class is being executed on
++     * a non ASCII platform. Default value of false (ASCII platform)
++     * which will disable the localize method. It is set once in the static initializer.
++     */
++    public static boolean nonASCIIPlatform = false;                             //IBM-zos_ebcdic
++
++    static {
++        java.security.AccessController.doPrivileged(
++                new java.security.PrivilegedAction<Object>() {
++                    public Object run() {
++                        nonASCIIPlatform =
++                                !System.getProperty("platform.notASCII", "false").equalsIgnoreCase("false");
++                        return null;
++                    }
++                });
++    }
++
++    /**
++     * Make the constructor private so an instance of this class
++     * can't be created directly.
++     */
++    private LocalizedOutputStream(OutputStream out) {
++        super(out);
++    }
++
++    /**
++     * Convert a single character and write it to the output stream.
++     */
++    public void write(int c) throws IOException {
++        byte bbuf[] = new byte[1];
++        char cbuf[] = new char[1];
++
++        cbuf[0] = (char)c;
++        ctb.reset();
++        ByteBuffer bb = ByteBuffer.wrap(bbuf);
++        CharBuffer cb = CharBuffer.wrap(cbuf, 0, 1);
++        CoderResult cr = ctb.encode(cb, bb, true);
++        cr = ctb.flush(bb);
++
++        out.write(bbuf[0]);
++    }
++
++    /**
++     * Convert and write the supplied byte array of characters
++     * to the wrapped output stream. The number of characters written
++     * is determined by the length of the supplied array.
++     *
++     * @param b The byte array containing the characters.
++     */
++    public void write(byte b[]) throws IOException {
++        write(b, 0, b.length);
++    }
++
++    /**
++     * Convert and write <code>len</code> bytes from the supplied
++     * array, starting at <code>off</code> to the wrapped output stream.
++     *
++     * @param b   The byte array containing the characters.
++     * @param off The start offset into b of the bytes.
++     * @param len The number of characters to write from b.
++     */
++    public void write(byte b[], int off, int len) throws IOException {
++        int ep = off+len;
++
++        if ((off | len | (b.length - ep) | ep) < 0)
++            throw new IndexOutOfBoundsException();
++
++        for (int i = off ; i < ep ; i++) {
++            write(b[i]);
++        }
++    }
++
++    /**
++     * Static method used to determine if a LocalizedOutputStream
++     * needs to be wrapped around the supplied OutputStream.
++     *
++     * Firstly check if we are running on an ASCII platform,
++     * if so return the given output stream (do nothing).
++     * else check to see if the output stream is a
++     * LocalizedOutputStream or a wrapper around a
++     * LocalizedOutputStream (e.g. BufferOutputStream) if
++     * so, return the supplied output stream.
++     *
++     * @param in The output stream to be wrapped.
++     * @return   The resulting output stream, which may or may not
++     *           have been wrapped in a LocalizedOutputStream
++     */
++    public static OutputStream localize(OutputStream in) {
++
++        if (nonASCIIPlatform) {
++            OutputStream os = in;
++
++            /* i should never be null, this is just a
++             * safety test.
++             */
++            while (os != null) {
++
++                /* If we have found a LocalizedOutputStream
++                 * either passed in or inside of a wrapper
++                 * return the original class we were given.
++                 */
++                if (os instanceof LocalizedOutputStream) {
++                    break;
++                } else {
++                    /* Is the OutputStream a subclass of;
++                     * FilterOutputStream
++                     *    If so unwrap the class (get the hidden output stream)
++                     *    and continue.
++                     * FileOutputStream
++                     *    If so wrapper it, convert ASCII -> EBCDIC and return.
++                     */
++
++                    Class<?> c = os.getClass();
++                    while (c != null &&
++                           c != java.io.FileOutputStream.class &&
++                           c != FilterOutputStream.class) {
++                        c = c.getSuperclass();
++
++                    }
++
++                    if (c == FilterOutputStream.class) {
++                        os = LocalizedOutputStream.unwrap((FilterOutputStream)os);
++                    } else if (c == java.io.FileOutputStream.class) {
++                        return new LocalizedOutputStream(in);
++                    } else {
++                        break;
++                    }
++
++                }
++            }
++        }
++        return in;
++    }
++
++    /**
++     * Method used to tunnel into a FilterOutputStream and return
++     * the output stream it contains.
++     *
++     * @param fis FilterOutputStream from which the output stream
++     *            will be extracted.
++     * @return The output stream contained inside of fos.
++     */
++    public static OutputStream unwrap(FilterOutputStream fos) {                 //IBM-zos_ebcdic
++	OutputStream os;
++	try {
++	    Class<?> cl = fos.getClass();
++	    Field f = cl.getField("out");
++	    f.setAccessible(true);
++	    os = (OutputStream)f.get(fos);
++	} catch (Exception e) {
++	    os = null;
++	}
++	return os;
++    }
++
++}
++
++//IBM-zos_ebcdic
+diff --git a/src/java.base/share/classes/com/ibm/jvm/io/ZipInitialization.java b/src/java.base/share/classes/com/ibm/jvm/io/ZipInitialization.java
+new file mode 100644
+--- /dev/null
++++ b/src/java.base/share/classes/com/ibm/jvm/io/ZipInitialization.java
+@@ -0,0 +1,33 @@
++/*===========================================================================
++ * Licensed Materials - Property of IBM
++ * "Restricted Materials of IBM"
++ * 
++ * IBM SDK, Java(tm) Technology Edition, v9
++ * (C) Copyright IBM Corp. 2016, 2016. All Rights Reserved
++ *
++ * US Government Users Restricted Rights - Use, duplication or disclosure
++ * restricted by GSA ADP Schedule Contract with IBM Corp.
++ *===========================================================================
++ */
++package com.ibm.jvm.io;
++
++
++class ZipInitialization{
++
++ /**
++ * Returns the java.util.zip.ZipFile InputStream class.
++ */
++ public static Class<?> getZipFileInputStreamClass(){
++
++        Class<?> c;
++
++        try {
++            c = Class.forName("java.util.zip.ZipFile$ZipFileInputStream");
++        } catch (ClassNotFoundException e) {
++            c = null;
++        }
++        return c ;
++
++  }
++
++}
+
