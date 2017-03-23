@@ -219,6 +219,8 @@ if [ ${j9flag} = "true" ] ; then
 	bash ./openj9/get_j9_source.sh ${j9options}
 
 	patch -p1 < ./openj9/patches/root.patch
+	patch -p1 < ./openj9/patches/CompileJavaModules.patch
+	patch -p1 < ./openj9/patches/SetupJavaCompilers.patch
 	cd jdk
 	patch -p1 < ./../openj9/patches/jdk.patch
 	patch -p1 < ./../openj9/patches/jdk/jvmio.patch
