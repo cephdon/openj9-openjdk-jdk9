@@ -52,7 +52,7 @@ usage() {
 	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9] [... other j9 options] [-parallel=<true|false>]"
 	echo "where:"
 	echo "	-h|--help 				print this help, then exit"
-	echo "	-r|--revision=<tag> 	is one of: jdk-9+160 jdk-9+161"
+	echo "	-r|--revision=<tag> 	is one of: jdk-9+161 jdk-9+162"
 	echo "							[Note: fetch the given revision, otherwise get the latest sources"
 	echo "	-j9|--with-j9 			get the OpenJ9 latest sources "
 	echo " other j9 options (used only with -j9|--with-j9 option): "
@@ -77,7 +77,7 @@ usage() {
 }
 
 j9flag="false"
-hgtag="jdk-9+161"
+hgtag="jdk-9+162"
 
 
 for i in "$@"
@@ -118,7 +118,7 @@ do
 done
 
 # expected OpenJDK tags
-hgtags="jdk-9+160 jdk-9+161"
+hgtags="jdk-9+161 jdk-9+162"
 
 # check if sources loaded
 if [ ${j9flag} = "true" ] ; then
@@ -132,7 +132,6 @@ for i in ${all_repos} ; do
 	if [ -d ${i} ] ; then
 		echo "${i} sources already loaded"
 	else
-		echo "${i} sources not loaded"
 		has_sources="false"
 		break
 	fi
@@ -267,7 +266,7 @@ if [ ${j9flag} = "true" ] ; then
 	patch -p1 < ./../openj9/patches/jdk/VarHandles.patch
 	patch -p1 < ./../openj9/patches/jdk/verify_stub.patch
 	patch -p1 < ./../openj9/patches/jdk/ZipInitialization.patch
-        cd ..
+	cd ..
 
 else
 	# Get clones of all OpenJDK absent nested repositories (harmless if already exist)

@@ -238,9 +238,9 @@ index 18d92b0..d46f8b2 100644
  
  # zip-security is actually a bundle, but for now it needs to be considered
  # an image until this can be cleaned up properly.
-@@ -932,9 +952,12 @@ endif
+@@ -932,11 +952,14 @@ endif
  docs-image: docs-javadoc docs-copy
- 
+
  # This target builds the test image
 -test-image: prepare-test-image test-image-hotspot-jtreg-native \
 -    test-image-jdk-jtreg-native test-image-failure-handler test-image-hotspot-gtest
@@ -248,11 +248,14 @@ index 18d92b0..d46f8b2 100644
 +    test-image-jdk-jtreg-native test-image-failure-handler
 +
 +################################################################################
- 
+
 +j9vm-compose: all-images
  # all-images builds all our deliverables as images.
- all-images: product-images test-image docs-image
- 
+-all-images: product-images test-image docs-image
++all-images: product-images test-image
+
+ # all-bundles packages all our deliverables as tar.gz bundles.
+ all-bundles: product-bundles test-bundles docs-bundles
 @@ -960,7 +983,7 @@ jdk: exploded-image
  images: product-images
  docs: docs-image
