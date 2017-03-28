@@ -3,30 +3,30 @@
 usage() {
 	echo "Usage: $0 [-h|--help] [-j9vm-repo=<j9vm repo url>] [-j9vm-branch=<branch>] [-j9jcl-repo=<j9jcl repo url>] [-j9jcl-branch=<branch>] [... other OpenJ9 repositories and branches options] [-parallel=<true|false>]"
 	echo "where:"
-	echo "	-h|--help 			print this help, then exit"
-	echo "	-j9vm-repo			the OpenJ9/vm repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/j9vm.git"
-	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/j9vm.git"
-	echo "	-j9vm-branch		the OpenJ9/vm git branch: master "
-	echo "	-omr-repo			the OpenJ9/omr repository url: git002@gitlab-polyglot.hursley.ibm.com:omr/omr.git"
-	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/omr.git"
-	echo "	-omr-branch			the OpenJ9/omr git branch: java-master "
-	echo "	-binaries-repo		the OpenJ9/binaries repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/binaries.git"
-	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/binaries.git"
-	echo "	-binaries-branch	the OpenJ9/binaries git branch: master "
-	echo "	-tooling-repo		the OpenJ9/tooling repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/tooling.git"
-	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tooling.git"
-	echo "	-tooling-branch		the OpenJ9/tooling git branch: master "
-	echo "	-jit-repo			the OpenJ9/jit repository url: git002@gitlab-polyglot.hursley.ibm.com:jit/tr.open.git"
-	echo "						or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git "
-	echo "	-jit-branch			the OpenJ9/jit git branch: java-master "
-	echo "	-parallel			(boolean) if 'true' then the clone j9 repository commands run in parallel, default is false"
-	echo " "
+	echo "  -h|--help         print this help, then exit"
+	echo "  -j9vm-repo        the OpenJ9/vm repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/j9vm.git"
+	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/j9vm.git"
+	echo "  -j9vm-branch      the OpenJ9/vm git branch: master "
+	echo "  -omr-repo         the OpenJ9/omr repository url: git002@gitlab-polyglot.hursley.ibm.com:omr/omr.git"
+	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/omr.git"
+	echo "  -omr-branch       the OpenJ9/omr git branch: java-master "
+	echo "  -binaries-repo    the OpenJ9/binaries repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/binaries.git"
+	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/binaries.git"
+	echo "  -binaries-branch  the OpenJ9/binaries git branch: master "
+	echo "  -tooling-repo     the OpenJ9/tooling repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/tooling.git"
+	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tooling.git"
+	echo "  -tooling-branch   the OpenJ9/tooling git branch: master "
+	echo "  -jit-repo         the OpenJ9/jit repository url: git002@gitlab-polyglot.hursley.ibm.com:jit/tr.open.git"
+	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git "
+	echo "  -jit-branch       the OpenJ9/jit git branch: java-master "
+	echo "  -parallel         (boolean) if 'true' then the clone j9 repository commands run in parallel, default is false"
+	echo ""
 	exit 1
 }
 
 # require bash 4.0 or later to support associative arrays
 bash_version=`bash --version | sed -n 1p`
-if [[ $bash_version != *"version 4."* ]] ; then 
+if [[ $bash_version != *"version 4."* ]] ; then
 	echo "Bash version 4.0 or later is required!"
 	exit 1
 fi
@@ -99,11 +99,11 @@ do
 		usage
 		;;
 
-		-*)  # bad option
+		-*) # bad option
 		usage
 		;;
 
-		*)  # bad option
+		*) # bad option
 		usage
 		;;
 	esac
@@ -112,7 +112,7 @@ done
 # Get clones of all the Open J9 repositories
 git=`which git`
 
-# find git url 
+# find git url
 repo_url=`git config --local --get remote.origin.url`
 protocol=https
 
@@ -130,8 +130,8 @@ else
 fi
 
 # clone OpenJ9 repos
-echo "[$(date +%F) $(date +%T)] Get OpenJ9 sources"
-START_TIME=`date +%s`
+date '+[%F %T] Get OpenJ9 sources'
+START_TIME=$(date +%s)
 
 for i in "${!default_j9repos[@]}" ; do
 	# clone repo
@@ -150,11 +150,11 @@ for i in "${!default_j9repos[@]}" ; do
 	commands[$i]=${git_clone_command}
 
 	if [ ${pflag} = "true" ] ; then
-		# run git clone in parallel 
+		# run git clone in parallel
 		( ${git_clone_command} ; echo "$?" > /tmp/${i}.pid.rc ) 2>&1 &
 	else
 		${git_clone_command}
-	fi 
+	fi
 done
 
 if [ ${pflag} = "true" ] ; then
@@ -162,23 +162,23 @@ if [ ${pflag} = "true" ] ; then
 	wait
 fi
 
-END_TIME=`date +%s`
-echo "[ $(date +%F) $(date +%T)] OpenJ9 clone repositories finished in $(($END_TIME - $START_TIME)) seconds"
-	
+END_TIME=$(date +%s)
+date "+[%F %T] OpenJ9 clone repositories finished in $(($END_TIME - $START_TIME)) seconds"
+
 for i in "${!default_j9repos[@]}" ; do
-	if [ -e /tmp/${i}.pid.rc ]; then 
+	if [ -e /tmp/${i}.pid.rc ]; then
 		rc=`cat /tmp/${i}.pid.rc | tr -d ' \n\r'`
 
 		if [ "$rc" -ne "0" ]; then
 			echo "ERROR: repository ${i} exited abnormally!"
 			cat /tmp/${i}.pid.rc
 			echo "Re-run: ${commands[$i]}"
-			
+
 			# clean up sources
 			if [ -d ${i} ] ; then
 				rm -fdr ${i}
 			fi
-			
+
 			# clean up pid file
 			rm -f /tmp/${i}.pid.rc
 			exit 1
