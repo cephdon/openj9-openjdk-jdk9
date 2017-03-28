@@ -24,6 +24,9 @@ OPENJ9JIT_SRC_DIR := $(SRC_ROOT)/tr.open
 OPENJ9OMR_SRC_DIR := $(SRC_ROOT)/omr
 OPENJ9BINARIES_DIR := $(SRC_ROOT)/binaries
 
+ENABLE_DDR=no
+$(info ENABLE_DDR is set to $(ENABLE_DDR))
+
 define \n
 
 
@@ -73,6 +76,9 @@ stage-j9:
 	@$(SED) -i -e '/dtfj/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
 	@$(SED) -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.management/module-info.java'
 
+	# disable ddr spec flags
+	$(if $(findstring no,$(ENABLE_DDR)), @$(SED) -i -e '/module_ddr/s/true/false/g' '$(OUTPUT_ROOT)/vm/buildspecs/$(J9_PLATFORM).spec')
+
 run-preprocessors-j9: stage-j9
 	$(info Running OpenJ9 preprocessors)
 	$(info J9_PLATFORM set to $(J9_PLATFORM))
@@ -80,7 +86,7 @@ run-preprocessors-j9: stage-j9
 	@echo "#define TR_LEVEL_NAME \"`git -C $(OPENJ9JIT_SRC_DIR) describe --tags`\"" > $(OUTPUT_ROOT)/vm/tr.source/jit.version
 	@echo "#define OMR_VERSION_STRING \"`git -C $(OPENJ9OMR_SRC_DIR) rev-parse --short HEAD`\"" > $(OUTPUT_ROOT)/vm/omr/OMR_VERSION_STRING
 
-	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=$(J9_PLATFORM) JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" tools)
+	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=$(J9_PLATFORM) ENABLE_DDR=$(ENABLE_DDR) JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" tools)
 
 	# generating the sha can happen earlier but j9version.h is an uma generated file
 	$(eval J9VM_SHA=$(shell git -C $(OPENJ9VM_SRC_DIR) rev-parse --short HEAD))
