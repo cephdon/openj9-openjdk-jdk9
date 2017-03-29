@@ -25,7 +25,7 @@
 # Shell script for a fast parallel forest/trees command
 
 usage() {
-      echo "usage: $0 [-h|--help] [-q|--quiet] [-v|--verbose] [-s|--sequential] [--] <command> [commands...]" > ${status_output}
+      echo "usage: $0 [-h|--help] [-q|--quiet] [-v|--verbose] [-s|--sequential] [-j9|--with-j9] [--] <command> [commands...]" > ${status_output}
       echo "command format : mercurial-command [ "jdk" ] [ extra-url ]"
       echo "command option: jdk : used only with clone command to request just the extra repos for JDK-only builds"
       echo "command option : extra-url : server hosting the extra repositories"
@@ -46,6 +46,7 @@ status_output="${HGFOREST_REDIRECT:-/dev/stdout}"
 qflag="${HGFOREST_QUIET:-false}"
 vflag="${HGFOREST_VERBOSE:-false}"
 sflag="${HGFOREST_SEQUENTIAL:-false}"
+withj9="false"
 while [ $# -gt 0 ]
 do
   case $1 in
@@ -63,6 +64,10 @@ do
 
     -s | --sequential )
       sflag="true"
+      ;;
+
+    -j9 | --with-j9 )
+      withj9="true"
       ;;
 
     '--' ) # no more options
@@ -181,8 +186,13 @@ nice_exit () {
 trap 'safe_interrupt' INT QUIT
 trap 'nice_exit' EXIT
 
+if [ "${withj9}" = "true" ] ; then
+subrepos="corba jaxp jaxws langtools jdk nashorn"
+jdk_subrepos_extra="closed jdk/src/closed jdk/make/closed jdk/test/closed"
+else
 subrepos="corba jaxp jaxws langtools jdk hotspot nashorn"
 jdk_subrepos_extra="closed jdk/src/closed jdk/make/closed jdk/test/closed hotspot/make/closed hotspot/src/closed hotspot/test/closed"
+fi
 subrepos_extra="$jdk_subrepos_extra deploy install sponsors pubs"
 
 # Only look in specific locations for possible forests (avoids long searches)
