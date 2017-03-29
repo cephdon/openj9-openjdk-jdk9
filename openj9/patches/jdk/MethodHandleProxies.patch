@@ -2,7 +2,7 @@ diff --git a/src/java.base/share/classes/java/lang/invoke/MethodHandleProxies.ja
 deleted file mode 100644
 --- a/src/java.base/share/classes/java/lang/invoke/MethodHandleProxies.java
 +++ /dev/null
-@@ -1,316 +0,0 @@
+@@ -1,318 +0,0 @@
 -/*
 - * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 - * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -43,6 +43,8 @@ deleted file mode 100644
 -/**
 - * This class consists exclusively of static methods that help adapt
 - * method handles to other JVM types, such as interfaces.
+- *
+- * @since 1.7
 - */
 -public class MethodHandleProxies {
 -
