@@ -52,7 +52,7 @@ usage() {
 	echo "Usage: $0 [-h|--help] [-r|--revision=<tag>] [-j9|--with-j9] [... other j9 options] [-parallel=<true|false>]"
 	echo "where:"
 	echo "	-h|--help 				print this help, then exit"
-	echo "	-r|--revision=<tag> 	is one of: jdk-9+161 jdk-9+162"
+	echo "	-r|--revision=<tag> 	is one of: jdk-9+162"
 	echo "							[Note: fetch the given revision, otherwise get the latest sources"
 	echo "	-j9|--with-j9 			get the OpenJ9 latest sources "
 	echo " other j9 options (used only with -j9|--with-j9 option): "
@@ -118,7 +118,22 @@ do
 done
 
 # expected OpenJDK tags
-hgtags="jdk-9+161 jdk-9+162"
+hgtags="jdk-9+162"
+
+if [ -n  "$hgtag" ]; then
+	good_tag="false"
+
+	for tag in ${hgtags} ; do
+		if [ ${hgtag} = ${tag} ] ; then
+			good_tag="true"
+			break
+		fi
+	done
+
+	if [ ${good_tag} = "false" ] ; then
+		error "Invalid revision number: $hgtag. Expected values are: $hgtags"
+	fi
+fi
 
 # check if sources loaded
 if [ ${j9flag} = "true" ] ; then
@@ -192,23 +207,6 @@ if [ ${j9flag} = "true" ] ; then
         patch -p1 < ./openj9/patches/hgforest.patch
 	# clone absent OpenJDK repositories (except hotspot - harmless if already exist)        
 	sh ./common/bin/hgforest.sh --with-j9 clone || exit $?
-
-	hgoptions=""
-	if [ -n  "$hgtag" ]; then
-		hgoptions="-u ${hgtag}"
-		good_tag="false"
-
-		for tag in ${hgtags} ; do
-			if [ ${hgtag} = ${tag} ] ; then
-				good_tag="true"
-				break
-			fi
-		done
-
-		if [ ${good_tag} = "false" ] ; then
-			error "Invalid revision number: $hgtag. Expected values are: $hgtags"
-		fi
-	fi
 
 	# roll back OpenJDK components to the given tag
 	echo "Update all existing repos with sources from tag: ${hgtag}"
