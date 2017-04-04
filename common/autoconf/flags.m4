@@ -157,6 +157,19 @@ AC_DEFUN_ONCE([FLAGS_SETUP_USER_SUPPLIED_FLAGS],
   CXXFLAGS="$EXTRA_CXXFLAGS"
   LDFLAGS="$EXTRA_LDFLAGS"
   CPPFLAGS=""
+
+  # Check whether --with-j9 was given.
+  BUILD_OPENJ9=false
+  AC_ARG_WITH(j9, [AS_HELP_STRING([--with-j9],
+  [Build J9 VM sources])])
+  if test "x$with-j9" != x; then
+     if ! (test -d $SRC_ROOT/j9vm); then
+       AC_MSG_ERROR(["Cannot locate the path to OpenJ9 sources!"])
+     fi
+     BUILD_OPENJ9=true
+  fi
+
+  AC_SUBST(BUILD_OPENJ9)
 ])
 
 # Setup the sysroot flags and add them to global CFLAGS and LDFLAGS so
@@ -1248,6 +1261,10 @@ AC_DEFUN([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK_HELPER],
   else
     $2JAVA_BASE_LDFLAGS="${$2JAVA_BASE_LDFLAGS} \
         -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base"
+
+    if test "x$with-j9" != x; then
+      $2JAVA_BASE_LDFLAGS="${$2JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
+    fi
 
     if test "x$1" = "xTARGET"; then
       # On some platforms (mac) the linker warns about non existing -L dirs.

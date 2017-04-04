@@ -204,7 +204,6 @@ fi
 # Get clones of all absent nested repositories (harmless if already exist)
 if [ ${j9flag} = "true" ] ; then
   #      hg pull default
-        patch -p1 < ./openj9/patches/hgforest.patch
 	# clone absent OpenJDK repositories (except hotspot - harmless if already exist)        
 	sh ./common/bin/hgforest.sh --with-j9 clone || exit $?
 
@@ -215,9 +214,6 @@ if [ ${j9flag} = "true" ] ; then
 	# Get clones of OpenJ9 absent repositories
 	bash ./openj9/get_j9_source.sh ${j9options}
 
-	patch -p1 < ./openj9/patches/root.patch
-	patch -p1 < ./openj9/patches/CompileJavaModules.patch
-	patch -p1 < ./openj9/patches/SetupJavaCompilers.patch
 	cd jdk
 	patch -p1 < ./../openj9/patches/jdk.patch
 	patch -p1 < ./../openj9/patches/jdk/jvmio.patch

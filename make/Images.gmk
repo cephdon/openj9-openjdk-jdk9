@@ -41,6 +41,8 @@ $(eval $(call IncludeCustomExtension, , Images-pre.gmk))
 # All modules for the current target platform.
 ALL_MODULES := $(call FindAllModules)
 
+#ALL_MODULES += com.ibm.management
+
 $(eval $(call ReadImportMetaData))
 
 JRE_MODULES += $(filter $(ALL_MODULES), $(BOOT_MODULES) \

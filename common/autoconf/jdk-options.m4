@@ -458,7 +458,10 @@ AC_DEFUN_ONCE([JDKOPT_ENABLE_DISABLE_GENERATE_CLASSLIST],
   fi
 
   AC_MSG_CHECKING([if the CDS classlist generation should be enabled])
-  if test "x$enable_generate_classlist" = "xyes"; then
+  if test "x$with-j9" != x; then
+    AC_MSG_RESULT([no])
+    ENABLE_GENERATE_CLASSLIST="false"
+  elif test "x$enable_generate_classlist" = "xyes"; then
     AC_MSG_RESULT([yes, forced])
     ENABLE_GENERATE_CLASSLIST="true"
     if test "x$ENABLE_GENERATE_CLASSLIST_POSSIBLE" = "xfalse"; then
