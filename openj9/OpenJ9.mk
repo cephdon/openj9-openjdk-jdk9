@@ -134,6 +134,8 @@ generate-j9jcl-sources :
 	@$(FIND) $(SUPPORT_OUTPUTDIR)/j9jcl_sources -name module-info.java -exec mv "{}" "{}.extra" ";"
 	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
 	@$(CP) -rp $(SUPPORT_OUTPUTDIR)/j9jcl_sources/java.base/* $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
+	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/gensrc/jdk.attach/
+	@$(CP) -rp $(SUPPORT_OUTPUTDIR)/j9jcl_sources/jdk.attach/* $(SUPPORT_OUTPUTDIR)/gensrc/jdk.attach/
 
 # used to build the BUILD_JVM which is used to compile jmods and module.
 compose-buildjvm :
