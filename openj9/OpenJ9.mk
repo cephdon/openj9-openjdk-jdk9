@@ -9,7 +9,7 @@ ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-x64)
 	export J9_PLATFORM=linux_x86-64
 	export J9_PLATFORM_CODE=xa64
 else ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-ppc64le)
-	export J9_PLATFORM=linux_ppc-64_le_gcc
+	export J9_PLATFORM=linux_ppc-64_le
 	export J9_PLATFORM_CODE=xl64
 else ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-s390x)
 	export J9_PLATFORM=linux_390-64
@@ -83,9 +83,6 @@ stage-j9 :
 
 	# disable ddr spec flags
 	$(if $(findstring no,$(ENABLE_DDR)), @$(SED) -i -e '/module_ddr/s/true/false/g' '$(OUTPUT_ROOT)/vm/buildspecs/$(J9_PLATFORM).spec')
-
-	# use gcc in omr configuration file on ppc le platform
-	$(if $(findstring linux_ppc,$(J9_PLATFORM)), @$(SED) -i -e 's/CXXLINKSHARED=$$$$(CC)/CXXLINKSHARED=$$$$(CXX)/g' '$(OUTPUT_ROOT)/vm/omr/glue/configure_includes/configure_linux_ppc.mk')
 
 run-preprocessors-j9 : stage-j9
 	$(info Running OpenJ9 preprocessors)
