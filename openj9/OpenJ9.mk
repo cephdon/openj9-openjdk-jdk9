@@ -18,8 +18,6 @@ else
 	$(error "Unsupported platform, contact support team: $(OPENJDK_TARGET_BUNDLE_PLATFORM)")
 endif
 
-J9_BUILD_ID ?= 326747
-
 # JDK_BUILD should be defined in the spec.gmk via configure.  This is required as long as j9 requires a classlib.properties file (PR 125728)
 JDK_BUILD = $(lastword $(subst 9+, ,$(shell hg id | awk '{print $$2}')))
 
@@ -130,9 +128,8 @@ generate-j9jcl-sources :
 			-srcRoot jcl/ \
 			-xml jpp_configuration.xml \
 			-dest $(SUPPORT_OUTPUTDIR)/j9jcl_sources \
-			-macro:define "com.ibm.oti.vm.library.version=29;com.ibm.oti.jcl.build=$(J9_BUILD_ID)" \
+			-macro:define "com.ibm.oti.vm.library.version=29" \
 			-tag:define "PLATFORM-$(J9_PLATFORM_CODE)" \
-			-tag:remove null \
 		> /dev/null
 	@$(FIND) $(SUPPORT_OUTPUTDIR)/j9jcl_sources -name module-info.java -exec mv "{}" "{}.extra" ";"
 	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
