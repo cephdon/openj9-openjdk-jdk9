@@ -71,14 +71,6 @@ stage-j9 :
 	@$(MKDIR) -p $(OUTPUT_ROOT)/vm/omr
 	@$(CP) -pr $(OPENJ9OMR_SRC_DIR)/* $(OUTPUT_ROOT)/vm/omr/
 
-	# Until all modules linked to java.base and java.management can compile cleanly, we need to omit. Issue 27
-	@$(SED) -i -e 's/, com.ibm.sharedclasses//g' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
-	@$(SED) -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
-	@$(SED) -i -e '/com.ibm.cuda/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
-	@$(SED) -i -e '/openj9.gpu/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
-	@$(SED) -i -e '/dtfj/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.base/module-info.java'
-	@$(SED) -i -e '/sharedclasses/d' '$(OUTPUT_ROOT)/vm/jcl/src/java.management/module-info.java'
-
 	# disable ddr spec flags
 	$(if $(findstring no,$(ENABLE_DDR)), @$(SED) -i -e '/module_ddr/s/true/false/g' '$(OUTPUT_ROOT)/vm/buildspecs/$(J9_PLATFORM).spec')
 
