@@ -65,9 +65,6 @@ usage() {
 	echo "	-binaries-repo			the OpenJ9/binaries repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/binaries.git"
 	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/binaries.git"
 	echo "	-binaries-branch		the OpenJ9/binaries git branch: master "
-	echo "	-tooling-repo			the OpenJ9/tooling repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/tooling.git"
-	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tooling.git"
-	echo "	-tooling-branch			the OpenJ9/tooling git branch: master "
 	echo "	-jit-repo				the OpenJ9/jit repository url: git002@gitlab-polyglot.hursley.ibm.com:jit/tr.open.git"
 	echo "							or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git"
 	echo "	-jit-branch				the OpenJ9/jit git branch: java-master"
@@ -91,7 +88,7 @@ do
 		j9flag="true"
 		;;
 
-		-j9vm-repo=* | -j9vm-branch=* | -omr-repo=* | -omr-branch=* | -binaries-repo=* | -binaries-branch=* | -tooling-repo=* | -tooling-branch=* | -jit-repo=* |-jit-branch=* )
+		-j9vm-repo=* | -j9vm-branch=* | -omr-repo=* | -omr-branch=* | -binaries-repo=* | -binaries-branch=* | -jit-repo=* |-jit-branch=* )
 		j9options="${j9options} ${i}"
 		;;
 
@@ -137,7 +134,7 @@ fi
 
 # check if sources loaded
 if [ ${j9flag} = "true" ] ; then
-	all_repos="corba jaxp jaxws langtools jdk nashorn binaries j9vm omr tooling"
+	all_repos="corba jaxp jaxws langtools jdk nashorn binaries j9vm omr"
 else
 	all_repos="corba jaxp jaxws langtools jdk hotspot nashorn"
 fi

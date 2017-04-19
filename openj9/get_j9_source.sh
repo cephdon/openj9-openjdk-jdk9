@@ -1,7 +1,7 @@
 #!/bin/sh
 
 usage() {
-	echo "Usage: $0 [-h|--help] [-j9vm-repo=<j9vm repo url>] [-j9vm-branch=<branch>] [-j9jcl-repo=<j9jcl repo url>] [-j9jcl-branch=<branch>] [... other OpenJ9 repositories and branches options] [-parallel=<true|false>]"
+	echo "Usage: $0 [-h|--help] [-j9vm-repo=<j9vm repo url>] [-j9vm-branch=<branch>] [... other OpenJ9 repositories and branches options] [-parallel=<true|false>]"
 	echo "where:"
 	echo "  -h|--help         print this help, then exit"
 	echo "  -j9vm-repo        the OpenJ9/vm repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/j9vm.git"
@@ -13,9 +13,6 @@ usage() {
 	echo "  -binaries-repo    the OpenJ9/binaries repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/binaries.git"
 	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/binaries.git"
 	echo "  -binaries-branch  the OpenJ9/binaries git branch: master "
-	echo "  -tooling-repo     the OpenJ9/tooling repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/tooling.git"
-	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tooling.git"
-	echo "  -tooling-branch   the OpenJ9/tooling git branch: master "
 	echo "  -jit-repo         the OpenJ9/jit repository url: git002@gitlab-polyglot.hursley.ibm.com:jit/tr.open.git"
 	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git "
 	echo "  -jit-branch       the OpenJ9/jit git branch: java-master "
@@ -33,8 +30,8 @@ fi
 
 declare -A j9repos
 declare -A branches
-declare -A default_j9repos=( [j9vm]=j9/j9vm [omr]=omr/omr [binaries]=j9/binaries [tooling]=j9/tooling [tr.open]=jit/tr.open )
-declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master [tooling]=master [tr.open]=java-master )
+declare -A default_j9repos=( [j9vm]=j9/j9vm [omr]=omr/omr [binaries]=j9/binaries [tr.open]=jit/tr.open )
+declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master [tr.open]=java-master )
 declare -A commands
 
 ostype=`uname -s`
@@ -73,14 +70,6 @@ do
 
 		-binaries-branch=* )
 		branches[binaries]="${i#*=}"
-		;;
-
-		-tooling-repo=* )
-		j9repos[tooling]="${i#*=}"
-		;;
-
-		-tooling-branch=* )
-		branches[tooling]="${i#*=}"
 		;;
 
 		-jit-repo=* )
