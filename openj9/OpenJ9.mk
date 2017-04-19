@@ -144,7 +144,6 @@ compose-buildjvm :
 	$(info J9 phase of Compose BUILD_JVM)
 	@$(SED) -i -e 's/shape=vm.shape/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
 	@$(MKDIR) -p $(OUTPUT_ROOT)/jdk/lib/compressedrefs/
-	@$(CP) -p $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(OUTPUT_ROOT)/jdk/lib/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/*.so $(JDK_OUTPUTDIR)/lib/compressedrefs/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/J9TraceFormat.dat $(JDK_OUTPUTDIR)/lib/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/OMRTraceFormat.dat $(JDK_OUTPUTDIR)/lib/
@@ -160,7 +159,6 @@ compose :
 	$(info J9 phase of Compose JDK)
 	@$(SED) -i -e 's/shape=vm.shape/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
 	@$(MKDIR) -p $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs/
-	@$(CP) -p $(OPENJ9VM_SRC_DIR)/../tooling/jvmbuild_scripts/jvm.cfg $(IMAGES_OUTPUTDIR)/jdk/lib/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/*.so $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/J9TraceFormat.dat $(IMAGES_OUTPUTDIR)/jdk/lib/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/OMRTraceFormat.dat $(IMAGES_OUTPUTDIR)/jdk/lib/
