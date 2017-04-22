@@ -19,7 +19,7 @@ else
 endif
 
 # JDK_BUILD should be defined in the spec.gmk via configure.  This is required as long as j9 requires a classlib.properties file (PR 125728)
-JDK_BUILD = $(lastword $(subst 9+, ,$(shell hg id | awk '{print $$2}')))
+JDK_BUILD = $(firstword $(subst -, ,$(subst jdk-9+, ,$(shell git describe --tags))))
 
 # repo variables should be defined in the spec.gmk via configure
 OPENJ9VM_SRC_DIR   := $(SRC_ROOT)/j9vm
