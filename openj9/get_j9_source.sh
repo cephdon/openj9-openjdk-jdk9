@@ -1,7 +1,7 @@
 #!/bin/sh
 
 usage() {
-	echo "Usage: $0 [-h|--help] [-j9vm-repo=<j9vm repo url>] [-j9vm-branch=<branch>] [... other OpenJ9 repositories and branches options] [-parallel=<true|false>]"
+	echo "Usage: $0 [-h|--help] [-j9vm-repo=<j9vm repo url>] [-j9vm-branch=<branch>] [-j9jcl-repo=<j9jcl repo url>] [-j9jcl-branch=<branch>] [... other OpenJ9 repositories and branches options] [-parallel=<true|false>]"
 	echo "where:"
 	echo "  -h|--help         print this help, then exit"
 	echo "  -j9vm-repo        the OpenJ9/vm repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/j9vm.git"
@@ -34,8 +34,8 @@ declare -A default_j9repos=( [j9vm]=j9/j9vm [omr]=omr/omr [binaries]=j9/binaries
 declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master [tr.open]=java-master )
 declare -A commands
 
-ostype=`uname -s`
 pflag="false"
+base_git_url=git002@gitlab-polyglot.hursley.ibm.com
 
 for i in "$@"
 do
@@ -98,51 +98,47 @@ do
 	esac
 done
 
-# Get clones of all the Open J9 repositories
 git=`which git`
-
-# find git url
-repo_url=`git config --local --get remote.origin.url`
-protocol=https
-
-if [[ $repo_url == "" ]] ; then
-	base_git_url=git002@gitlab-polyglot.hursley.ibm.com:
-elif [[ $repo_url == *"$protocol"* ]] ; then
-	# http protocol: e.g. https://gitlab-polyglot.hursley.ibm.com/omr/openjdk.git
-	b=`expr index ${repo_url:8} /`
-	base_git_url=`expr substr ${repo_url:8} 1 $b`
-	base_git_url="https://${base_git_url}"
-else
-	# ssh protocol: e.g. git002@gitlab-polyglot.hursley.ibm.com:omr/openjdk.git
-	b=`expr index $repo_url :`
-	base_git_url=`expr substr $repo_url 1 $b`
-fi
 
 # clone OpenJ9 repos
 date '+[%F %T] Get OpenJ9 sources'
 START_TIME=$(date +%s)
 
 for i in "${!default_j9repos[@]}" ; do
-	# clone repo
 	branch=${default_branches[$i]}
 	if [ ${branches[$i]+_} ]; then
 		branch=${branches[$i]}
 	fi
 
-	git_url=${base_git_url}${default_j9repos[$i]}.git
+	if [ -d ${i} ]; then
+		echo
+		echo "Update ${i} source"
+		echo
 
-	if [ ${j9repos[$i]+_} ]; then
-		git_url="${j9repos[$i]}"
-	fi
+                cd ${i}
+		git fetch origin || exit$?
+		git pull --rebase origin ${branch} || exit $?
+		cd -
+        else
+		git_url=${base_git_url}:${default_j9repos[$i]}.git
 
-	git_clone_command="${git} clone --recursive -b ${branch} ${git_url} ${i}"
-	commands[$i]=${git_clone_command}
+		if [ ${j9repos[$i]+_} ]; then
+			git_url="${j9repos[$i]}"
+		fi
 
-	if [ ${pflag} = "true" ] ; then
-		# run git clone in parallel
-		( ${git_clone_command} ; echo "$?" > /tmp/${i}.pid.rc ) 2>&1 &
-	else
-		${git_clone_command}
+		git_clone_command="${git} clone --recursive -b ${branch} ${git_url} ${i}"
+		commands[$i]=${git_clone_command}
+
+		echo
+		echo "Clone repository: ${i}"
+		echo
+
+		if [ ${pflag} = "true" ] ; then
+			# run git clone in parallel
+			( ${git_clone_command} ; echo "$?" > /tmp/${i}.pid.rc ) 2>&1 &
+		else
+			${git_clone_command} || exit $?
+		fi
 	fi
 done
 
