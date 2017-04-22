@@ -63,7 +63,7 @@ BOOT_MODULES += \
     jdk.net \
     jdk.sctp \
     jdk.unsupported \
-    jdk.internal.vm.ci \
+    #com.ibm.management \
     #
 
 # to be deprivileged
@@ -168,7 +168,6 @@ GENERATED_SRC_DIRS += \
 
 TOP_SRC_DIRS += \
     $(CORBA_TOPDIR)/src \
-    $(HOTSPOT_TOPDIR)/src \
     $(JDK_TOPDIR)/src \
     $(LANGTOOLS_TOPDIR)/src \
     $(JAXP_TOPDIR)/src \

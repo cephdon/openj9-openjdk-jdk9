@@ -1,0 +1,14 @@
+# exclude all source directories
+build/
+corba/
+jaxp/
+jaxws/
+langtools/
+jdk/
+hotspot/
+nashorn/
+j9vm/
+binaries/
+tr.open/
+omr/
+tooling/

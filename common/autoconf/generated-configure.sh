@@ -848,6 +848,7 @@ VS_PATH
 CYGWIN_LINK
 SYSROOT_LDFLAGS
 SYSROOT_CFLAGS
+BUILD_OPENJ9
 EXTRA_LDFLAGS
 EXTRA_CXXFLAGS
 EXTRA_CFLAGS
@@ -1096,6 +1097,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -1172,6 +1174,7 @@ with_toolchain_type
 with_extra_cflags
 with_extra_cxxflags
 with_extra_ldflags
+with_j9
 with_toolchain_version
 with_build_devkit
 with_jtreg
@@ -1384,6 +1387,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1636,6 +1640,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1773,7 +1786,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1926,6 +1939,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -2111,6 +2125,7 @@ Optional Packages:
   --with-extra-cflags     extra flags to be used when compiling jdk c-files
   --with-extra-cxxflags   extra flags to be used when compiling jdk c++-files
   --with-extra-ldflags    extra flags to be used when linking jdk
+  --with-j9               Build J9 VM sources
   --with-toolchain-version
                           the version of the toolchain to look for, use
                           '--help' to show possible values [platform
@@ -5173,7 +5188,7 @@ VS_SDK_PLATFORM_NAME_2013=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1489410066
+DATE_WHEN_GENERATED=1491243703
 
 ###############################################################################
 #
@@ -31142,8 +31157,8 @@ $as_echo "yes, will use output dir" >&6; }
     fi
   fi
 
-  JMOD="$BUILD_JDK/bin/jmod"
-  JLINK="$BUILD_JDK/bin/jlink"
+  JMOD="$BUILD_JDK/bin/jmod -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
+  JLINK="$BUILD_JDK/bin/jlink -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
 
 
 
@@ -31719,6 +31734,23 @@ fi
   CXXFLAGS="$EXTRA_CXXFLAGS"
   LDFLAGS="$EXTRA_LDFLAGS"
   CPPFLAGS=""
+
+  # Check whether --with-j9 was given.
+  BUILD_OPENJ9=false
+
+# Check whether --with-j9 was given.
+if test "${with_j9+set}" = set; then :
+  withval=$with_j9;
+fi
+
+  if test "x$with-j9" != x; then
+     if ! (test -d $SRC_ROOT/j9vm); then
+       as_fn_error $? "\"Cannot locate the path to OpenJ9 sources!\"" "$LINENO" 5
+     fi
+     BUILD_OPENJ9=true
+  fi
+
+
 
 # The sysroot cflags are needed for configure to be able to run the compilers
 
@@ -50962,6 +50994,10 @@ $as_echo "$as_me: GCC >= 6 detected; adding ${NO_DELETE_NULL_POINTER_CHECKS_CFLA
     JAVA_BASE_LDFLAGS="${JAVA_BASE_LDFLAGS} \
         -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base"
 
+    if test "x$with-j9" != x; then
+      JAVA_BASE_LDFLAGS="${JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
+    fi
+
     if test "xTARGET" = "xTARGET"; then
       # On some platforms (mac) the linker warns about non existing -L dirs.
       # For any of the variants server, client or minimal, the dir matches the
@@ -51779,6 +51815,10 @@ $as_echo "$as_me: GCC >= 6 detected; adding ${NO_DELETE_NULL_POINTER_CHECKS_CFLA
   else
     OPENJDK_BUILD_JAVA_BASE_LDFLAGS="${OPENJDK_BUILD_JAVA_BASE_LDFLAGS} \
         -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base"
+
+    if test "x$with-j9" != x; then
+      OPENJDK_BUILD_JAVA_BASE_LDFLAGS="${OPENJDK_BUILD_JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
+    fi
 
     if test "xBUILD" = "xTARGET"; then
       # On some platforms (mac) the linker warns about non existing -L dirs.
@@ -64959,7 +64999,11 @@ fi
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the CDS classlist generation should be enabled" >&5
 $as_echo_n "checking if the CDS classlist generation should be enabled... " >&6; }
-  if test "x$enable_generate_classlist" = "xyes"; then
+  if test "x$with-j9" != x; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    ENABLE_GENERATE_CLASSLIST="false"
+  elif test "x$enable_generate_classlist" = "xyes"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes, forced" >&5
 $as_echo "yes, forced" >&6; }
     ENABLE_GENERATE_CLASSLIST="true"
