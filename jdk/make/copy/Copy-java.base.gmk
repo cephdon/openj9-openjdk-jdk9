@@ -36,6 +36,7 @@ TARGETS += \
     $(INCLUDE_DST_DIR)/jvmticmlr.h \
     $(INCLUDE_DST_DIR)/classfile_constants.h \
     $(INCLUDE_DST_OS_DIR)/jni_md.h \
+    $(INCLUDE_DST_DIR)/jvmti.h \
     #
 
 $(INCLUDE_DST_DIR)/%.h: $(JDK_TOPDIR)/src/java.base/share/native/include/%.h
@@ -43,6 +44,8 @@ $(INCLUDE_DST_DIR)/%.h: $(JDK_TOPDIR)/src/java.base/share/native/include/%.h
 
 $(INCLUDE_DST_OS_DIR)/%.h: \
     $(JDK_TOPDIR)/src/java.base/$(OPENJDK_TARGET_OS_EXPORT_DIR)/native/include/%.h
+	$(call install-file)
+$(INCLUDE_DST_DIR)/jvmti.h: $(SRC_ROOT)/j9vm/runtime/include/jvmti.h
 	$(call install-file)
 
 ################################################################################

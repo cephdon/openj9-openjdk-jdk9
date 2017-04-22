@@ -28,7 +28,7 @@
 #include "jvm.h"
 
 #include "java_lang_SecurityManager.h"
-#include "java_lang_ClassLoader.h"
+//#include "java_lang_ClassLoader.h"                                            //IBM-use_j9
 
 /*
  * Make sure a security manager instance is initialized.
@@ -126,3 +126,4 @@ Java_java_lang_SecurityManager_classLoaderDepth0(JNIEnv *env, jobject this)
 
     return JVM_ClassLoaderDepth(env);
 }
+//IBM-use_j9
