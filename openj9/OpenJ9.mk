@@ -84,7 +84,7 @@ run-preprocessors-j9 : stage-j9
 	@echo "#define TR_LEVEL_NAME \"`git -C $(OPENJ9JIT_SRC_DIR) describe --tags`\"" > $(OUTPUT_ROOT)/vm/tr.source/jit.version
 	@echo "#define OMR_VERSION_STRING \"`git -C $(OPENJ9OMR_SRC_DIR) rev-parse --short HEAD`\"" > $(OUTPUT_ROOT)/vm/omr/OMR_VERSION_STRING
 
-	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=$(J9_PLATFORM) ENABLE_DDR=$(ENABLE_DDR) JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" tools)
+	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=$(J9_PLATFORM) ENABLE_DDR=$(ENABLE_DDR) JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" OMR_DIR=$(OUTPUT_ROOT)/vm/omr tools)
 
 	# generating the sha can happen earlier but j9version.h is an uma generated file
 	$(eval J9VM_SHA=$(shell git -C $(OPENJ9VM_SRC_DIR) rev-parse --short HEAD))
@@ -97,7 +97,7 @@ run-preprocessors-j9 : stage-j9
 
 compile-j9 : run-preprocessors-j9
 	$(info Compiling OpenJ9 in $(OUTPUT_ROOT)/vm)
-	(cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) all)
+	(export OMR_DIR=$(OUTPUT_ROOT)/vm/omr && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) all)
 	$(info OpenJ9 compile complete)
 	# libjvm.so and libjsig.so are required for compiling other java.base support natives
 	@$(MKDIR) -p $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
