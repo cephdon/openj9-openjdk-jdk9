@@ -18,9 +18,6 @@ else
 	$(error "Unsupported platform, contact support team: $(OPENJDK_TARGET_BUNDLE_PLATFORM)")
 endif
 
-# JDK_BUILD should be defined in the spec.gmk via configure.  This is required as long as j9 requires a classlib.properties file (PR 125728)
-JDK_BUILD = $(firstword $(subst -, ,$(subst jdk-9+, ,$(shell git describe --tags))))
-
 # repo variables should be defined in the spec.gmk via configure
 OPENJ9VM_SRC_DIR   := $(SRC_ROOT)/j9vm
 OPENJ9JIT_SRC_DIR  := $(SRC_ROOT)/tr.open
@@ -84,7 +81,7 @@ run-preprocessors-j9 : stage-j9
 	@echo "#define TR_LEVEL_NAME \"`git -C $(OPENJ9JIT_SRC_DIR) describe --tags`\"" > $(OUTPUT_ROOT)/vm/tr.source/jit.version
 	@echo "#define OMR_VERSION_STRING \"`git -C $(OPENJ9OMR_SRC_DIR) rev-parse --short HEAD`\"" > $(OUTPUT_ROOT)/vm/omr/OMR_VERSION_STRING
 
-	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=$(J9_PLATFORM) ENABLE_DDR=$(ENABLE_DDR) JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" tools)
+	(export BOOT_JDK=$(BOOT_JDK) && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) -f buildtools.mk SPEC=$(J9_PLATFORM) ENABLE_DDR=$(ENABLE_DDR) JAVA_HOME=$(BOOT_JDK) BUILD_ID=000000 UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" OMR_DIR=$(OUTPUT_ROOT)/vm/omr tools)
 
 	# generating the sha can happen earlier but j9version.h is an uma generated file
 	$(eval J9VM_SHA=$(shell git -C $(OPENJ9VM_SRC_DIR) rev-parse --short HEAD))
@@ -97,7 +94,7 @@ run-preprocessors-j9 : stage-j9
 
 compile-j9 : run-preprocessors-j9
 	$(info Compiling OpenJ9 in $(OUTPUT_ROOT)/vm)
-	(cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) all)
+	(export OMR_DIR=$(OUTPUT_ROOT)/vm/omr && cd $(OUTPUT_ROOT)/vm && $(MAKE) $(MAKEFLAGS) all)
 	$(info OpenJ9 compile complete)
 	# libjvm.so and libjsig.so are required for compiling other java.base support natives
 	@$(MKDIR) -p $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
@@ -134,7 +131,6 @@ compose-buildjvm :
 	# identical to the compose target except it moves content to a different directory for the buildjvm
 	# Issue 61.
 	$(info J9 phase of Compose BUILD_JVM)
-	@$(SED) -i -e 's/shape=vm.shape/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
 	@$(MKDIR) -p $(OUTPUT_ROOT)/jdk/lib/compressedrefs/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/*.so $(JDK_OUTPUTDIR)/lib/compressedrefs/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/J9TraceFormat.dat $(JDK_OUTPUTDIR)/lib/
@@ -144,12 +140,10 @@ compose-buildjvm :
 	@$(MKDIR) -p $(JDK_OUTPUTDIR)/lib/j9vm
 	@$(CP) -p $(OUTPUT_ROOT)/vm/redirector/libjvm_b156.so $(JDK_OUTPUTDIR)/lib/j9vm/libjvm.so
 	@$(CP) -p $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(JDK_OUTPUTDIR)/lib/compressedrefs
-	@$(CP) -p $(OUTPUT_ROOT)/vm/classlib.properties $(JDK_OUTPUTDIR)/lib
 
 # used to build the final images/jdk deliverable
 compose :
 	$(info J9 phase of Compose JDK)
-	@$(SED) -i -e 's/shape=vm.shape/shape=b$(JDK_BUILD)/g' $(OUTPUT_ROOT)/vm/classlib.properties
 	@$(MKDIR) -p $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/*.so $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/J9TraceFormat.dat $(IMAGES_OUTPUTDIR)/jdk/lib/
@@ -159,7 +153,6 @@ compose :
 	@$(MKDIR) -p $(IMAGES_OUTPUTDIR)/jdk/lib/j9vm
 	@$(CP) -p $(OUTPUT_ROOT)/vm/redirector/libjvm_b156.so $(IMAGES_OUTPUTDIR)/jdk/lib/j9vm/libjvm.so
 	@$(CP) -p $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs
-	@$(CP) -p $(OUTPUT_ROOT)/vm/classlib.properties $(IMAGES_OUTPUTDIR)/jdk/lib
 
 clean-j9 :
 	( cd $(OUTPUT_ROOT)/vm && \
