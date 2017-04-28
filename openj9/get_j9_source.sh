@@ -1,21 +1,25 @@
 #!/bin/sh
 
 usage() {
-	echo "Usage: $0 [-h|--help] [-j9vm-repo=<j9vm repo url>] [-j9vm-branch=<branch>] [-j9jcl-repo=<j9jcl repo url>] [-j9jcl-branch=<branch>] [... other OpenJ9 repositories and branches options] [-parallel=<true|false>]"
+	echo "Usage: $0 [-h|--help] [-j9vm-repo=<j9vm repo url>] [-j9vm-branch=<branch>] [-j9vmSHA=<commit sha>] [... other OpenJ9 repositories and branches options] [-parallel=<true|false>]"
 	echo "where:"
 	echo "  -h|--help         print this help, then exit"
 	echo "  -j9vm-repo        the OpenJ9/vm repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/j9vm.git"
 	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/j9vm.git"
-	echo "  -j9vm-branch      the OpenJ9/vm git branch: master "
+	echo "  -j9vm-branch      the OpenJ9/vm git branch: master"
+	echo "  -j9vmSHA          a commit SHA for the j9vm repository"
 	echo "  -omr-repo         the OpenJ9/omr repository url: git002@gitlab-polyglot.hursley.ibm.com:omr/omr.git"
 	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/omr.git"
-	echo "  -omr-branch       the OpenJ9/omr git branch: java-master "
+	echo "  -omr-branch       the OpenJ9/omr git branch: java-master"
+	echo "  -omrSHA           a commit SHA for the omr repository"
 	echo "  -binaries-repo    the OpenJ9/binaries repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/binaries.git"
 	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/binaries.git"
-	echo "  -binaries-branch  the OpenJ9/binaries git branch: master "
+	echo "  -binaries-branch  the OpenJ9/binaries git branch: master"
+	echo "  -binariesSHA      a commit SHA for the binaries repository"
 	echo "  -jit-repo         the OpenJ9/jit repository url: git002@gitlab-polyglot.hursley.ibm.com:jit/tr.open.git"
-	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git "
-	echo "  -jit-branch       the OpenJ9/jit git branch: java-master "
+	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git"
+	echo "  -jit-branch       the OpenJ9/jit git branch: java-master"
+	echo "  -jitSHA           a commit SHA for the tr.open repository"
 	echo "  -parallel         (boolean) if 'true' then the clone j9 repository commands run in parallel, default is false"
 	echo ""
 	exit 1
@@ -33,6 +37,7 @@ declare -A branches
 declare -A default_j9repos=( [j9vm]=j9/j9vm [omr]=omr/omr [binaries]=j9/binaries [tr.open]=jit/tr.open )
 declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master [tr.open]=java-master )
 declare -A commands
+declare -A shas
 
 pflag="false"
 base_git_url=git002@gitlab-polyglot.hursley.ibm.com
@@ -56,12 +61,20 @@ do
 		branches[j9vm]="${i#*=}"
 		;;
 
+		-j9vmSHA=* )
+		shas[j9vm]="${i#*=}"
+		;;
+
 		-omr-repo=* )
 		j9repos[omr]="${i#*=}"
 		;;
 
 		-omr-branch=* )
 		branches[omr]="${i#*=}"
+		;;
+
+		-omrSHA=* )
+		shas[omr]="${i#*=}"
 		;;
 
 		-binaries-repo=* )
@@ -72,12 +85,20 @@ do
 		branches[binaries]="${i#*=}"
 		;;
 
+		-binariesSHA=* )
+		shas[binaries]="${i#*=}"
+		;;
+
 		-jit-repo=* )
 		j9repos[tr.open]="${i#*=}"
 		;;
 
 		-jit-branch=* )
 		branches[tr.open]="${i#*=}"
+		;;
+
+		-jitSHA=* )
+		shas[tr.open]="${i#*=}"
 		;;
 
 		-parallel=* )
@@ -115,11 +136,15 @@ for i in "${!default_j9repos[@]}" ; do
 		echo "Update ${i} source"
 		echo
 
-                cd ${i}
-		git fetch origin || exit$?
+		cd ${i}
 		git pull --rebase origin ${branch} || exit $?
+
+		if [ -f .gitmodules ]; then
+			git pull --rebase --recurse-submodules=yes || exit $?
+			git submodule update --rebase --recursive || exit $?
+		fi
 		cd -
-        else
+	else
 		git_url=${base_git_url}:${default_j9repos[$i]}.git
 
 		if [ ${j9repos[$i]+_} ]; then
@@ -152,6 +177,7 @@ date "+[%F %T] OpenJ9 clone repositories finished in $(($END_TIME - $START_TIME)
 
 for i in "${!default_j9repos[@]}" ; do
 	if [ -e /tmp/${i}.pid.rc ]; then
+		# check if the git clone repository command failed
 		rc=`cat /tmp/${i}.pid.rc | tr -d ' \n\r'`
 
 		if [ "$rc" -ne "0" ]; then
@@ -168,5 +194,15 @@ for i in "${!default_j9repos[@]}" ; do
 			rm -f /tmp/${i}.pid.rc
 			exit 1
 		fi
+	fi
+
+	if [ ${shas[$i]+_} ]; then
+		echo
+		echo "Update ${i} to commit ID: ${shas[$i]}"
+		echo
+
+		cd ${i}
+		git checkout ${shas[$i]} || exit $?
+		cd -
 	fi
 done
