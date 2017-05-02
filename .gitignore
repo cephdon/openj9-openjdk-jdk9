@@ -1,7 +1,6 @@
 # exclude all source directories
-build/
-j9vm/
-binaries/
-tr.open/
-omr/
-
+/binaries/
+/build/
+/j9vm/
+/omr/
+/tr.open/
