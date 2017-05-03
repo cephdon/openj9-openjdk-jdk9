@@ -2,7 +2,7 @@
 
 ## How to Build OpenJ9 on Linux
 
-1. Download and install *jdk8* from http://java.sun.com/javase/downloads/index.jsp
+1. Download and install *IBM SDK for Java 8* from Java Information Manager: http://w3.hursley.ibm.com/java/jim/ibmsdks/java80/index.html
 1. Clone the OpenJ9 repository
 
   > git clone git@github.ibm.com:runtimes/openj9.git
@@ -17,11 +17,11 @@
 
   > bash configure --with-j9
   
-  **Note:** If *configure* cannot find the *jdk8*, you might need to use the *configure* option *--with-boot-jdk*.
+  **Note:** If *configure* cannot find the *IBM SDK for Java 8*, you might need to use the *configure* option *--with-boot-jdk*.
   
   **e.g:** 
   
-  > bash configure --with-j9 --with-boot-jdk=/path/to/jdk8
+  > bash configure --with-j9 --with-boot-jdk=/path/to/ibm/sdk8
   
 1. Compile and build:
   
