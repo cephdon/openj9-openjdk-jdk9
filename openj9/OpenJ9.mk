@@ -224,6 +224,7 @@ generate-j9jcl-sources :
 	$(info Generating J9JCL sources)
 	@$(BOOT_JDK)/bin/java \
 		-cp "$(OPENJ9BINARIES_DIR)/vm/ibm/*:$(OPENJ9BINARIES_DIR)/common/third/*" \
+		-Dfile.encoding=US-ASCII \
 		com.ibm.jpp.commandline.CommandlineBuilder \
 			-verdict \
 			-baseDir $(OPENJ9VM_SRC_DIR)/ \
