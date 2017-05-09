@@ -40,12 +40,6 @@ endif
 ENABLE_DDR=no
 $(info ENABLE_DDR is set to $(ENABLE_DDR))
 
-define \n
-
-
-
-endef
-
 # we should try using the makeflags as defined by openjdk (Issue 59)
 NUMCPU := $(shell grep -c ^processor /proc/cpuinfo)
 #$(info NUMCPU = $(NUMCPU))
@@ -198,6 +192,11 @@ run-preprocessors-j9 : stage-j9
 			tools \
 	)
 
+	@echo 'HACK: Sending generated hook & trace code into the past..."'
+	@$(FIND) $(OUTPUT_ROOT)/vm -type f \
+		'(' -name '*hook.h' -o -name '*hook_internal.h' -o -name 'ut_*.[ch]' -o -name 'ut_*.inc' ')' \
+		-print | $(XARGS) $(TOUCH) -t 201705011200
+
 	# for xLinux there is a hardcoded reference in mkconstants.mk for gcc-4.6.  Openjdk minimum gcc is 4.8.2
 	@$(SED) -i -e 's/gcc-4.6/gcc/g' $(OUTPUT_ROOT)/vm/makelib/mkconstants.mk
 	# new compilers require different options for j9 to compile.  This needs review per platform.  Issue 60.
@@ -209,7 +208,7 @@ compile-j9 : run-preprocessors-j9
 	$(info OpenJ9 compile complete)
 	# libjvm.so and libjsig.so are required for compiling other java.base support natives
 	@$(MKDIR) -p $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
-	@$(CP) -pr $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
+	@$(CP) -p $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(OUTPUT_ROOT)/support/modules_libs/java.base/server/
 	$(info Creating support/modules_libs/java.base/server/libjvm.so from J9 sources)
 	@$(CP) -p $(OUTPUT_ROOT)/vm/libjsig.so $(OUTPUT_ROOT)/support/modules_libs/java.base/
 	$(info Creating support/modules_libs/java.base/libjsig.so from J9 sources)
@@ -219,8 +218,11 @@ compile-j9 : run-preprocessors-j9
 # currently only works for java.base
 generate-j9jcl-sources :
 	$(info Generating J9JCL sources)
+	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/j9jcl_sources
+	@$(FIND) $(SUPPORT_OUTPUTDIR)/j9jcl_sources -name module-info.java.extra -print \
+		| $(SED) -e 's/\.extra$$//' | $(XARGS) -n1 '-I{}' $(MV) '{}.extra' '{}'
 	@$(BOOT_JDK)/bin/java \
-		-cp "$(OPENJ9BINARIES_DIR)/vm/ibm/*:$(OPENJ9BINARIES_DIR)/common/third/*" \
+		-cp $(OPENJ9BINARIES_DIR)/vm/ibm/jpp.jar \
 		-Dfile.encoding=US-ASCII \
 		com.ibm.jpp.commandline.CommandlineBuilder \
 			-verdict \
