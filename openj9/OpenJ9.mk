@@ -174,9 +174,6 @@ stage-j9 : \
 	$(info Staging OpenJ9 OMR in $(OUTPUT_ROOT)/vm)
 	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/omr,$(OPENJ9OMR_SRC_DIR))
 
-	# use gcc in omr configuration file on ppc le platform
-	@$(SED) -i -e 's/CXXLINKSHARED=$$$$(CC)/CXXLINKSHARED=$$$$(CXX)/g' $(OUTPUT_ROOT)/vm/omr/glue/configure_includes/configure_linux_ppc.mk
-
 run-preprocessors-j9 : stage-j9
 	$(info Running OpenJ9 preprocessors)
 	$(info J9_PLATFORM set to $(J9_PLATFORM))
