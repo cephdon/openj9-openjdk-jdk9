@@ -34,13 +34,13 @@ fi
 
 declare -A j9repos
 declare -A branches
-declare -A default_j9repos=( [j9vm]=j9/j9vm [omr]=omr/omr [binaries]=j9/binaries [tr.open]=jit/tr.open )
+declare -A default_j9repos=( [j9vm]=runtimes/j9vm [omr]=runtimes/omr [binaries]=runtimes/binaries [tr.open]=runtimes/tr.open )
 declare -A default_branches=( [j9vm]=master [omr]=java-master [binaries]=master [tr.open]=java-master )
 declare -A commands
 declare -A shas
 
 pflag="false"
-base_git_url=git002@gitlab-polyglot.hursley.ibm.com
+base_git_url=git@github.ibm.com
 
 for i in "$@"
 do
