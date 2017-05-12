@@ -192,11 +192,6 @@ run-preprocessors-j9 : stage-j9
 			tools \
 	)
 
-	@echo 'HACK: Sending generated hook & trace code into the past..."'
-	@$(FIND) $(OUTPUT_ROOT)/vm -type f \
-		'(' -name '*hook.h' -o -name '*hook_internal.h' -o -name 'ut_*.[ch]' -o -name 'ut_*.inc' ')' \
-		-print | $(XARGS) $(TOUCH) -t 201705011200
-
 	# for xLinux there is a hardcoded reference in mkconstants.mk for gcc-4.6.  Openjdk minimum gcc is 4.8.2
 	@$(SED) -i -e 's/gcc-4.6/gcc/g' $(OUTPUT_ROOT)/vm/makelib/mkconstants.mk
 	# new compilers require different options for j9 to compile.  This needs review per platform.  Issue 60.
