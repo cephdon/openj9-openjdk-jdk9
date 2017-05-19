@@ -5,7 +5,7 @@
 1. Download and install *IBM SDK for Java 8* from Java Information Manager: http://w3.hursley.ibm.com/java/jim/ibmsdks/java80/index.html
 1. Clone the OpenJ9 repository
 
-  > git clone git@github.ibm.com:runtimes/openj9.git
+  > git clone git@github.ibm.com:runtimes/openjdk-jdk9.git
 
 1. Get all of the J9 sources:
 
