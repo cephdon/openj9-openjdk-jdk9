@@ -5174,7 +5174,11 @@ VS_SDK_PLATFORM_NAME_2013=
 # This line needs to be here, verbatim, after all includes and the dummy hook
 # definitions. It is replaced with custom functionality when building
 # custom sources.
-#CUSTOM_AUTOCONF_INCLUDE
+# (c) Copyright IBM Corp. 2017 All Rights Reserved
+
+
+
+
 
 # Do not change or remove the following line, it is needed for consistency checks:
 DATE_WHEN_GENERATED=1496868424
@@ -66742,6 +66746,12 @@ $as_echo "$OUTPUT_DIR_IS_LOCAL" >&6; }
 
 # At the end, call the custom hook. (Dummy macro if no custom sources available)
 
+    CLOSED_AUTOCONF_DIR="$SRC_ROOT/closed/autoconf"
+
+    # Create the custom-spec.gmk
+    ac_config_files="$ac_config_files $OUTPUT_ROOT/custom-spec.gmk:$CLOSED_AUTOCONF_DIR/custom-spec.gmk.in"
+
+
 
 # This needs to be done after CUSTOM_LATE_HOOK since we can setup custom features.
 
@@ -67488,6 +67498,7 @@ do
     "$OUTPUT_ROOT/buildjdk-spec.gmk") CONFIG_FILES="$CONFIG_FILES $OUTPUT_ROOT/buildjdk-spec.gmk:$AUTOCONF_DIR/buildjdk-spec.gmk.in" ;;
     "$OUTPUT_ROOT/compare.sh") CONFIG_FILES="$CONFIG_FILES $OUTPUT_ROOT/compare.sh:$AUTOCONF_DIR/compare.sh.in" ;;
     "$OUTPUT_ROOT/Makefile") CONFIG_FILES="$CONFIG_FILES $OUTPUT_ROOT/Makefile:$AUTOCONF_DIR/Makefile.in" ;;
+    "$OUTPUT_ROOT/custom-spec.gmk") CONFIG_FILES="$CONFIG_FILES $OUTPUT_ROOT/custom-spec.gmk:$CLOSED_AUTOCONF_DIR/custom-spec.gmk.in" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
