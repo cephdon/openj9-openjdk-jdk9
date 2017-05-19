@@ -195,7 +195,7 @@ run-preprocessors-j9 : stage-j9
 	# for xLinux there is a hardcoded reference in mkconstants.mk for gcc-4.6.  Openjdk minimum gcc is 4.8.2
 	@$(SED) -i -e 's/gcc-4.6/gcc/g' $(OUTPUT_ROOT)/vm/makelib/mkconstants.mk
 	# new compilers require different options for j9 to compile.  This needs review per platform.  Issue 60.
-	@$(SED) -i -e 's/O3 -fno-strict-aliasing/O0 -Wno-format -Wno-unused-result -fno-strict-aliasing -fno-stack-protector/g' $(OUTPUT_ROOT)/vm/makelib/targets.mk
+	@$(SED) -i -e 's/-O3 -fno-strict-aliasing/-O0 -fno-strict-aliasing -fno-stack-protector/g' $(OUTPUT_ROOT)/vm/makelib/targets.mk
 
 compile-j9 : run-preprocessors-j9
 	$(info Compiling OpenJ9 in $(OUTPUT_ROOT)/vm)
