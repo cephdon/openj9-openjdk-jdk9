@@ -9,7 +9,7 @@
 
 1. Get all of the J9 sources:
 
-  > cd openj9
+  > cd openjdk-jdk9
   
   > bash get_source.sh --with-j9
 
