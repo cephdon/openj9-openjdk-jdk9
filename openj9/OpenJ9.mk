@@ -214,8 +214,6 @@ compile-j9 : run-preprocessors-j9
 generate-j9jcl-sources :
 	$(info Generating J9JCL sources)
 	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/j9jcl_sources
-	@$(FIND) $(SUPPORT_OUTPUTDIR)/j9jcl_sources -name module-info.java.extra -print \
-		| $(SED) -e 's/\.extra$$//' | $(XARGS) -n1 '-I{}' $(MV) '{}.extra' '{}'
 	@$(BOOT_JDK)/bin/java \
 		-cp $(OPENJ9BINARIES_DIR)/vm/ibm/jpp.jar \
 		-Dfile.encoding=US-ASCII \
@@ -229,7 +227,6 @@ generate-j9jcl-sources :
 			-macro:define "com.ibm.oti.vm.library.version=29" \
 			-tag:define "PLATFORM-$(J9_PLATFORM_CODE)" \
 		> /dev/null
-	@$(FIND) $(SUPPORT_OUTPUTDIR)/j9jcl_sources -name module-info.java -exec mv "{}" "{}.extra" ";"
 	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
 	@$(CP) -rp $(SUPPORT_OUTPUTDIR)/j9jcl_sources/java.base/* $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
 	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/gensrc/jdk.attach/
