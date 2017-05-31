@@ -220,7 +220,7 @@ generate-j9jcl-sources :
 		com.ibm.jpp.commandline.CommandlineBuilder \
 			-verdict \
 			-baseDir $(OPENJ9VM_SRC_DIR)/ \
-			-config SIDECAR19-SE \
+			-config SIDECAR19-SE-B148  \
 			-srcRoot jcl/ \
 			-xml jpp_configuration.xml \
 			-dest $(SUPPORT_OUTPUTDIR)/j9jcl_sources \
