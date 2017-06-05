@@ -6,13 +6,13 @@ include $(SPEC)
 
 # J9_PLATFORM should be defined in the spec.gmk via configure (Issue 58)
 ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-x64)
-  export J9_PLATFORM=linux_x86-64
+  export J9_PLATFORM=linux_x86-64_cmprssptrs
   export J9_PLATFORM_CODE=xa64
 else ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-ppc64le)
-  export J9_PLATFORM=linux_ppc-64_le_gcc
+  export J9_PLATFORM=linux_ppc-64_cmprssptrs_le_gcc
   export J9_PLATFORM_CODE=xl64
 else ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-s390x)
-  export J9_PLATFORM=linux_390-64
+  export J9_PLATFORM=linux_390-64_cmprssptrs
   export J9_PLATFORM_CODE=xz64
 else
   $(error "Unsupported platform, contact support team: $(OPENJDK_TARGET_BUNDLE_PLATFORM)")
@@ -225,8 +225,7 @@ generate-j9jcl-sources :
 			-xml jpp_configuration.xml \
 			-dest $(SUPPORT_OUTPUTDIR)/j9jcl_sources \
 			-macro:define "com.ibm.oti.vm.library.version=29" \
-			-tag:define "PLATFORM-$(J9_PLATFORM_CODE)" \
-		> /dev/null
+			-tag:define "PLATFORM-$(J9_PLATFORM_CODE)"
 	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
 	@$(CP) -rp $(SUPPORT_OUTPUTDIR)/j9jcl_sources/java.base/* $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
 	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/gensrc/jdk.attach/
@@ -243,10 +242,10 @@ compose-buildjvm :
 	@$(CP) -p $(OUTPUT_ROOT)/vm/OMRTraceFormat.dat $(JDK_OUTPUTDIR)/lib/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/options.default $(JDK_OUTPUTDIR)/lib/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/java*properties $(JDK_OUTPUTDIR)/lib/
-	@$(MKDIR) -p $(JDK_OUTPUTDIR)/lib/j9vm
+	@$(MKDIR) -p $(JDK_OUTPUTDIR)/lib/j9vm/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/redirector/libjvm_b156.so $(JDK_OUTPUTDIR)/lib/j9vm/libjvm.so
-	@$(CP) -p $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(JDK_OUTPUTDIR)/lib/compressedrefs
-	@$(CP) -p $(OUTPUT_ROOT)/vm/jcl/cl_se9/libjclse9_29.so $(JDK_OUTPUTDIR)/lib/compressedrefs
+	@$(CP) -p $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(JDK_OUTPUTDIR)/lib/compressedrefs/
+	@$(CP) -p $(OUTPUT_ROOT)/vm/jcl/cl_se9/libjclse9_29.so $(JDK_OUTPUTDIR)/lib/compressedrefs/
 
 # used to build the final images/jdk deliverable
 compose :
@@ -257,10 +256,10 @@ compose :
 	@$(CP) -p $(OUTPUT_ROOT)/vm/OMRTraceFormat.dat $(IMAGES_OUTPUTDIR)/jdk/lib/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/options.default $(IMAGES_OUTPUTDIR)/jdk/lib/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/java*properties $(IMAGES_OUTPUTDIR)/jdk/lib/
-	@$(MKDIR) -p $(IMAGES_OUTPUTDIR)/jdk/lib/j9vm
+	@$(MKDIR) -p $(IMAGES_OUTPUTDIR)/jdk/lib/j9vm/
 	@$(CP) -p $(OUTPUT_ROOT)/vm/redirector/libjvm_b156.so $(IMAGES_OUTPUTDIR)/jdk/lib/j9vm/libjvm.so
-	@$(CP) -p $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs
-	@$(CP) -p $(OUTPUT_ROOT)/vm/jcl/cl_se9/libjclse9_29.so $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs
+	@$(CP) -p $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs/
+	@$(CP) -p $(OUTPUT_ROOT)/vm/jcl/cl_se9/libjclse9_29.so $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs/
 
 clean-j9 :
 	( cd $(OUTPUT_ROOT)/vm && \
