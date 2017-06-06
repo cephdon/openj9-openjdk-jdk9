@@ -31,7 +31,6 @@ import java.io.UncheckedIOException;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.Module;
 import java.net.URL;
 import java.security.AccessController;
 import java.security.AccessControlContext;
@@ -352,9 +351,7 @@ public abstract class ClassLoader {
     private ClassLoader(Void unused, String name, ClassLoader parent) {
         this.name = name;
         this.parent = parent;
-        this.unnamedModule
-            = SharedSecrets.getJavaLangReflectModuleAccess()
-                           .defineUnnamedModule(this);
+        this.unnamedModule = new Module(this);
         if (ParallelLoaders.isRegistered(this.getClass())) {
             parallelLockMap = new ConcurrentHashMap<>();
             package2certs = new ConcurrentHashMap<>();
@@ -983,7 +980,7 @@ public abstract class ClassLoader {
     {
         protectionDomain = preDefineClass(name, protectionDomain);
         String source = defineClassSourceLocation(protectionDomain);
-        Class<?> c = defineClass1(name, b, off, len, protectionDomain, source);
+        Class<?> c = defineClass1(this, name, b, off, len, protectionDomain, source);
         postDefineClass(c, protectionDomain);
         return c;
     }
@@ -1075,17 +1072,17 @@ public abstract class ClassLoader {
 
         protectionDomain = preDefineClass(name, protectionDomain);
         String source = defineClassSourceLocation(protectionDomain);
-        Class<?> c = defineClass2(name, b, b.position(), len, protectionDomain, source);
+        Class<?> c = defineClass2(this, name, b, b.position(), len, protectionDomain, source);
         postDefineClass(c, protectionDomain);
         return c;
     }
 
-    private native Class<?> defineClass1(String name, byte[] b, int off, int len,
-                                         ProtectionDomain pd, String source);
+    static native Class<?> defineClass1(ClassLoader loader, String name, byte[] b, int off, int len,
+                                        ProtectionDomain pd, String source);
 
-    private native Class<?> defineClass2(String name, java.nio.ByteBuffer b,
-                                         int off, int len, ProtectionDomain pd,
-                                         String source);
+    static native Class<?> defineClass2(ClassLoader loader, String name, java.nio.ByteBuffer b,
+                                        int off, int len, ProtectionDomain pd,
+                                        String source);
 
     // true if the name is null or has the potential to be a valid binary name
     private boolean checkName(String name) {
@@ -2348,6 +2345,7 @@ public abstract class ClassLoader {
             this.isBuiltin = isBuiltin;
         }
 
+        @SuppressWarnings("deprecation")
         protected void finalize() {
             synchronized (loadedLibraryNames) {
                 if (fromClass.getClassLoader() != null && loaded) {
