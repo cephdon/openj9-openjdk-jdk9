@@ -220,7 +220,7 @@ generate-j9jcl-sources :
 		com.ibm.jpp.commandline.CommandlineBuilder \
 			-verdict \
 			-baseDir $(OPENJ9VM_SRC_DIR)/ \
-			-config SIDECAR19-SE-B148  \
+			-config SIDECAR19-SE-B165 \
 			-srcRoot jcl/ \
 			-xml jpp_configuration.xml \
 			-dest $(SUPPORT_OUTPUTDIR)/j9jcl_sources \
@@ -246,6 +246,7 @@ compose-buildjvm :
 	@$(MKDIR) -p $(JDK_OUTPUTDIR)/lib/j9vm
 	@$(CP) -p $(OUTPUT_ROOT)/vm/redirector/libjvm_b156.so $(JDK_OUTPUTDIR)/lib/j9vm/libjvm.so
 	@$(CP) -p $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(JDK_OUTPUTDIR)/lib/compressedrefs
+	@$(CP) -p $(OUTPUT_ROOT)/vm/jcl/cl_se9/libjclse9_29.so $(JDK_OUTPUTDIR)/lib/compressedrefs
 
 # used to build the final images/jdk deliverable
 compose :
@@ -259,6 +260,7 @@ compose :
 	@$(MKDIR) -p $(IMAGES_OUTPUTDIR)/jdk/lib/j9vm
 	@$(CP) -p $(OUTPUT_ROOT)/vm/redirector/libjvm_b156.so $(IMAGES_OUTPUTDIR)/jdk/lib/j9vm/libjvm.so
 	@$(CP) -p $(OUTPUT_ROOT)/vm/j9vm_b156/libjvm.so $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs
+	@$(CP) -p $(OUTPUT_ROOT)/vm/jcl/cl_se9/libjclse9_29.so $(IMAGES_OUTPUTDIR)/jdk/lib/compressedrefs
 
 clean-j9 :
 	( cd $(OUTPUT_ROOT)/vm && \

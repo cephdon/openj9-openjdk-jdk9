@@ -28,7 +28,6 @@ package java.lang.module;
 import java.io.PrintStream;
 import java.lang.module.ModuleDescriptor.Provides;
 import java.lang.module.ModuleDescriptor.Requires.Modifier;
-import java.lang.reflect.Layer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,6 +46,7 @@ import java.util.stream.Collectors;
 
 import jdk.internal.module.ModuleHashes;
 import jdk.internal.module.ModuleReferenceImpl;
+import jdk.internal.module.ModuleTarget;
 
 /**
  * The resolver used by {@link Configuration#resolve} and {@link
@@ -66,14 +66,15 @@ final class Resolver {
     // maps module name to module reference
     private final Map<String, ModuleReference> nameToReference = new HashMap<>();
 
+    // true if all automatic modules have been found
+    private boolean haveAllAutomaticModules;
+
     // module constraints on target platform
     private String osName;
     private String osArch;
-    private String osVersion;
 
     String osName() { return osName; }
     String osArch() { return osArch; }
-    String osVersion() { return osVersion; }
 
     /**
      * @throws IllegalArgumentException if there are more than one parent and
@@ -107,16 +108,6 @@ final class Resolver {
                 } else {
                     if (!value.equals(osArch)) {
                         failParentConflict("OS architecture", osArch, value);
-                    }
-                }
-            }
-            value = parent.osVersion();
-            if (value != null) {
-                if (osVersion == null) {
-                    osVersion  = value;
-                } else {
-                    if (!value.equals(osVersion)) {
-                        failParentConflict("OS version", osVersion, value);
                     }
                 }
             }
@@ -182,6 +173,21 @@ final class Resolver {
             ModuleDescriptor descriptor = q.poll();
             assert nameToReference.containsKey(descriptor.name());
 
+            // if the module is an automatic module then all automatic
+            // modules need to be resolved
+            if (descriptor.isAutomatic() && !haveAllAutomaticModules) {
+                addFoundAutomaticModules().forEach(mref -> {
+                    ModuleDescriptor other = mref.descriptor();
+                    q.offer(other);
+                    if (isTracing()) {
+                        trace("Automatic module %s located, required by %s",
+                              other.name(), descriptor.name());
+                        mref.location().ifPresent(uri -> trace("  (%s)", uri));
+                    }
+                });
+                haveAllAutomaticModules = true;
+            }
+
             // process dependences
             for (ModuleDescriptor.Requires requires : descriptor.requires()) {
 
@@ -210,10 +216,15 @@ final class Resolver {
                 if (!nameToReference.containsKey(dn)) {
                     addFoundModule(mref);
                     q.offer(mref.descriptor());
-                    resolved.add(mref.descriptor());
 
                     if (isTracing()) {
-                        trace("Module %s located, required by %s",
+                        String prefix;
+                        if (mref.descriptor().isAutomatic()) {
+                            prefix = "Automatic module";
+                        } else {
+                            prefix = "Module";
+                        }
+                        trace(prefix + " %s located, required by %s",
                               dn, descriptor.name());
                         mref.location().ifPresent(uri -> trace("  (%s)", uri));
                     }
@@ -261,7 +272,7 @@ final class Resolver {
 
         // the initial set of modules that may use services
         Set<ModuleDescriptor> initialConsumers;
-        if (Layer.boot() == null) {
+        if (ModuleLayer.boot() == null) {
             initialConsumers = new HashSet<>();
         } else {
             initialConsumers = parents.stream()
@@ -312,19 +323,36 @@ final class Resolver {
         return this;
     }
 
+    /**
+     * Add all automatic modules that have not already been found to the
+     * nameToReference map.
+     */
+    private Set<ModuleReference> addFoundAutomaticModules() {
+        Set<ModuleReference> result = new HashSet<>();
+        findAll().forEach(mref -> {
+            String mn = mref.descriptor().name();
+            if (mref.descriptor().isAutomatic() && !nameToReference.containsKey(mn)) {
+                addFoundModule(mref);
+                result.add(mref);
+            }
+        });
+        return result;
+    }
 
     /**
      * Add the module to the nameToReference map. Also check any constraints on
      * the target platform with the constraints of other modules.
      */
     private void addFoundModule(ModuleReference mref) {
-        ModuleDescriptor descriptor = mref.descriptor();
-        nameToReference.put(descriptor.name(), mref);
+        String mn = mref.descriptor().name();
 
-        if (descriptor.osName().isPresent()
-                || descriptor.osArch().isPresent()
-                || descriptor.osVersion().isPresent())
-            checkTargetConstraints(descriptor);
+        if (mref instanceof ModuleReferenceImpl) {
+            ModuleTarget target = ((ModuleReferenceImpl)mref).moduleTarget();
+            if (target != null)
+                checkTargetConstraints(mn, target);
+        }
+
+        nameToReference.put(mn, mref);
     }
 
     /**
@@ -332,58 +360,44 @@ final class Resolver {
      * conflict with the constraints of other modules resolved so far or
      * modules in parent configurations.
      */
-    private void checkTargetConstraints(ModuleDescriptor descriptor) {
-        String value = descriptor.osName().orElse(null);
+    private void checkTargetConstraints(String mn, ModuleTarget target) {
+        String value = target.osName();
         if (value != null) {
             if (osName == null) {
                 osName = value;
             } else {
                 if (!value.equals(osName)) {
-                    failTargetConstraint(descriptor);
+                    failTargetConstraint(mn, target);
                 }
             }
         }
-        value = descriptor.osArch().orElse(null);
+        value = target.osArch();
         if (value != null) {
             if (osArch == null) {
                 osArch = value;
             } else {
                 if (!value.equals(osArch)) {
-                    failTargetConstraint(descriptor);
-                }
-            }
-        }
-        value = descriptor.osVersion().orElse(null);
-        if (value != null) {
-            if (osVersion == null) {
-                osVersion = value;
-            } else {
-                if (!value.equals(osVersion)) {
-                    failTargetConstraint(descriptor);
+                    failTargetConstraint(mn, target);
                 }
             }
         }
     }
 
-    private void failTargetConstraint(ModuleDescriptor md) {
-        String s1 = targetAsString(osName, osArch, osVersion);
-        String s2 = targetAsString(md);
-        findFail("Module %s has constraints on target platform that conflict" +
-                 " with other modules: %s, %s", md.name(), s1, s2);
+    private void failTargetConstraint(String mn, ModuleTarget target) {
+        String s1 = targetAsString(osName, osArch);
+        String s2 = targetAsString(target.osName(), target.osArch());
+        findFail("Module %s has constraints on target platform (%s) that"
+                 + " conflict with other modules: %s", mn, s1, s2);
     }
 
-    private String targetAsString(ModuleDescriptor descriptor) {
-        String osName = descriptor.osName().orElse(null);
-        String osArch = descriptor.osArch().orElse(null);
-        String osVersion = descriptor.osVersion().orElse(null);
-        return targetAsString(osName, osArch, osVersion);
+    private String targetAsString(ModuleTarget target) {
+        return targetAsString(target.osName(), target.osArch());
     }
 
-    private String targetAsString(String osName, String osArch, String osVersion) {
+    private String targetAsString(String osName, String osArch) {
         return new StringJoiner("-")
                 .add(Objects.toString(osName, "*"))
                 .add(Objects.toString(osArch, "*"))
-                .add(Objects.toString(osVersion, "*"))
                 .toString();
     }
 
@@ -557,7 +571,7 @@ final class Resolver {
         // need "requires transitive" from the modules in parent configurations
         // as there may be selected modules that have a dependency on modules in
         // the parent configuration.
-        if (Layer.boot() == null) {
+        if (ModuleLayer.boot() == null) {
             g2 = new HashMap<>(capacity);
         } else {
             g2 = parents.stream()
@@ -712,16 +726,30 @@ final class Resolver {
 
 
     /**
-     * Checks the readability graph to ensure that no two modules export the
-     * same package to a module. This includes the case where module M has
-     * a local package P and M reads another module that exports P to M.
-     * Also checks the uses/provides of module M to ensure that it reads a
-     * module that exports the package of the service type to M.
+     * Checks the readability graph to ensure that
+     * <ol>
+     *   <li><p> A module does not read two or more modules with the same name.
+     *   This includes the case where a module reads another another with the
+     *   same name as itself. </p></li>
+     *   <li><p> Two or more modules in the configuration don't export the same
+     *   package to a module that reads both. This includes the case where a
+     *   module {@code M} containing package {@code p} reads another module
+     *   that exports {@code p} to {@code M}. </p></li>
+     *   <li><p> A module {@code M} doesn't declare that it "{@code uses p.S}"
+     *   or "{@code provides p.S with ...}" but package {@code p} is neither
+     *   in module {@code M} nor exported to {@code M} by any module that
+     *   {@code M} reads. </p></li>
+     * </ol>
      */
     private void checkExportSuppliers(Map<ResolvedModule, Set<ResolvedModule>> graph) {
 
         for (Map.Entry<ResolvedModule, Set<ResolvedModule>> e : graph.entrySet()) {
             ModuleDescriptor descriptor1 = e.getKey().descriptor();
+            String name1 = descriptor1.name();
+
+            // the names of the modules that are read (including self)
+            Set<String> names = new HashSet<>();
+            names.add(name1);
 
             // the map of packages that are local or exported to descriptor1
             Map<String, ModuleDescriptor> packageToExporter = new HashMap<>();
@@ -737,9 +765,20 @@ final class Resolver {
             for (ResolvedModule endpoint : reads) {
                 ModuleDescriptor descriptor2 = endpoint.descriptor();
 
+                String name2 = descriptor2.name();
+                if (descriptor2 != descriptor1 && !names.add(name2)) {
+                    if (name2.equals(name1)) {
+                        resolveFail("Module %s reads another module named %s",
+                                    name1, name1);
+                    } else{
+                        resolveFail("Module %s reads more than one module named %s",
+                                     name1, name2);
+                    }
+                }
+
                 if (descriptor2.isAutomatic()) {
                     // automatic modules read self and export all packages
-                    if (descriptor2 != descriptor1){
+                    if (descriptor2 != descriptor1) {
                         for (String source : descriptor2.packages()) {
                             ModuleDescriptor supplier
                                 = packageToExporter.putIfAbsent(source, descriptor2);

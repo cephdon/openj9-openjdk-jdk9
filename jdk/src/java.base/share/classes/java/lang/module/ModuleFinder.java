@@ -25,8 +25,6 @@
 
 package java.lang.module;
 
-import java.io.File;
-import java.io.FilePermission;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,9 +41,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import jdk.internal.module.ModuleBootstrap;
+import jdk.internal.module.ModulePatcher;
 import jdk.internal.module.ModulePath;
 import jdk.internal.module.SystemModuleFinder;
-import sun.security.action.GetPropertyAction;
 
 /**
  * A finder of modules. A {@code ModuleFinder} is used to find modules during
@@ -146,9 +144,9 @@ public interface ModuleFinder {
      *
      * <p> If there is a security manager set then its {@link
      * SecurityManager#checkPermission(Permission) checkPermission} method is
-     * invoked to check that the caller has been granted {@link FilePermission}
-     * to recursively read the directory that is the value of the system
-     * property {@code java.home}. </p>
+     * invoked to check that the caller has been granted
+     * {@link RuntimePermission RuntimePermission("accessSystemModules")}
+     * to access the system modules. </p>
      *
      * @return A {@code ModuleFinder} that locates the system modules
      *
@@ -156,30 +154,53 @@ public interface ModuleFinder {
      *         If denied by the security manager
      */
     static ModuleFinder ofSystem() {
-        String home;
-
         SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
-            PrivilegedAction<String> pa = new GetPropertyAction("java.home");
-            home = AccessController.doPrivileged(pa);
-            Permission p = new FilePermission(home + File.separator + "-", "read");
-            sm.checkPermission(p);
+            sm.checkPermission(new RuntimePermission("accessSystemModules"));
+            PrivilegedAction<ModuleFinder> pa = ModuleFinder::privilegedOfSystem;
+            return AccessController.doPrivileged(pa);
         } else {
-            home = System.getProperty("java.home");
+            return privilegedOfSystem();
         }
+    }
 
+    /**
+     * Returns a module finder that locates the system modules. This method
+     * assumes it has permissions to access the runtime image.
+     */
+    private static ModuleFinder privilegedOfSystem() {
+        String home = System.getProperty("java.home");
         Path modules = Paths.get(home, "lib", "modules");
         if (Files.isRegularFile(modules)) {
             return SystemModuleFinder.getInstance();
         } else {
-            Path mlib = Paths.get(home, "modules");
-            if (Files.isDirectory(mlib)) {
-                // exploded build may be patched
-                return ModulePath.of(ModuleBootstrap.patcher(), mlib);
+            Path dir = Paths.get(home, "modules");
+            if (Files.isDirectory(dir)) {
+                return privilegedOf(ModuleBootstrap.patcher(), dir);
             } else {
                 throw new InternalError("Unable to detect the run-time image");
             }
         }
+    }
+
+    /**
+     * Returns a module finder that locates the system modules in an exploded
+     * image. The image may be patched.
+     */
+    private static ModuleFinder privilegedOf(ModulePatcher patcher, Path dir) {
+        ModuleFinder finder = ModulePath.of(patcher, dir);
+        return new ModuleFinder() {
+            @Override
+            public Optional<ModuleReference> find(String name) {
+                PrivilegedAction<Optional<ModuleReference>> pa = () -> finder.find(name);
+                return AccessController.doPrivileged(pa);
+            }
+            @Override
+            public Set<ModuleReference> findAll() {
+                PrivilegedAction<Set<ModuleReference>> pa = finder::findAll;
+                return AccessController.doPrivileged(pa);
+            }
+        };
     }
 
     /**
@@ -201,20 +222,20 @@ public interface ModuleFinder {
      *
      * <p> If an element is a path to a directory of modules then each entry in
      * the directory is a packaged module or the top-level directory of an
-     * exploded module. It it an error if a directory contains more than one
+     * exploded module. It is an error if a directory contains more than one
      * module with the same name. If an element is a path to a directory, and
      * that directory contains a file named {@code module-info.class}, then the
      * directory is treated as an exploded module rather than a directory of
      * modules. </p>
      *
-     * <p> The module finder returned by this method supports modules that are
-     * packaged as JAR files. A JAR file with a {@code module-info.class} in
-     * the top-level directory of the JAR file (or overridden by a versioned
-     * entry in a {@link java.util.jar.JarFile#isMultiRelease() multi-release}
-     * JAR file) is a modular JAR and is an <em>explicit module</em>.
-     * A JAR file that does not have a {@code module-info.class} in the
-     * top-level directory is created as an automatic module. The components
-     * for the automatic module are derived as follows:
+     * <p id="automatic-modules"> The module finder returned by this method
+     * supports modules packaged as JAR files. A JAR file with a {@code
+     * module-info.class} in its top-level directory, or in a versioned entry
+     * in a {@linkplain java.util.jar.JarFile#isMultiRelease() multi-release}
+     * JAR file, is a modular JAR file and thus defines an <em>explicit</em>
+     * module. A JAR file that does not have a {@code module-info.class} in its
+     * top-level directory defines an <em>automatic module</em>, as follows:
+     * </p>
      *
      * <ul>
      *
@@ -233,16 +254,16 @@ public interface ModuleFinder {
      *         ModuleDescriptor.Version} and ignored if it cannot be parsed as
      *         a {@code Version}. </p></li>
      *
-     *         <li><p> For the module name, then any trailing digits and dots
-     *         are removed, all non-alphanumeric characters ({@code [^A-Za-z0-9]})
-     *         are replaced with a dot ({@code "."}), all repeating dots are
-     *         replaced with one dot, and all leading and trailing dots are
-     *         removed. </p></li>
+     *         <li><p> All non-alphanumeric characters ({@code [^A-Za-z0-9]})
+     *         in the module name are replaced with a dot ({@code "."}), all
+     *         repeating dots are replaced with one dot, and all leading and
+     *         trailing dots are removed. </p></li>
      *
      *         <li><p> As an example, a JAR file named {@code foo-bar.jar} will
      *         derive a module name {@code foo.bar} and no version. A JAR file
-     *         named {@code foo-1.2.3-SNAPSHOT.jar} will derive a module name
-     *         {@code foo} and {@code 1.2.3-SNAPSHOT} as the version. </p></li>
+     *         named {@code foo-bar-1.2.3-SNAPSHOT.jar} will derive a module
+     *         name {@code foo.bar} and {@code 1.2.3-SNAPSHOT} as the version.
+     *         </p></li>
      *
      *     </ul></li>
      *
@@ -291,7 +312,9 @@ public interface ModuleFinder {
      *
      * <p> As with automatic modules, the contents of a packaged or exploded
      * module may need to be <em>scanned</em> in order to determine the packages
-     * in the module. If a {@code .class} file (other than {@code
+     * in the module. Whether {@linkplain java.nio.file.Files#isHidden(Path)
+     * hidden files} are ignored or not is implementation specific and therefore
+     * not specified. If a {@code .class} file (other than {@code
      * module-info.class}) is found in the top-level directory then it is
      * assumed to be a class in the unnamed package and so {@code FindException}
      * is thrown. </p>

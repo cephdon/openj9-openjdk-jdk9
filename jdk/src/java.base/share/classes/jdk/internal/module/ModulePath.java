@@ -513,7 +513,7 @@ public class ModulePath implements ModuleFinder {
                         String pn = packageName(cn);
                         if (!packages.contains(pn)) {
                             String msg = "Provider class " + cn + " not in module";
-                            throw new IOException(msg);
+                            throw new InvalidModuleDescriptorException(msg);
                         }
                         providerClasses.add(cn);
                     }
@@ -533,7 +533,7 @@ public class ModulePath implements ModuleFinder {
                 String pn = packageName(mainClass);
                 if (!packages.contains(pn)) {
                     String msg = "Main-Class " + mainClass + " not in module";
-                    throw new IOException(msg);
+                    throw new InvalidModuleDescriptorException(msg);
                 }
                 builder.mainClass(mainClass);
             }
@@ -547,7 +547,6 @@ public class ModulePath implements ModuleFinder {
      */
     private static class Patterns {
         static final Pattern DASH_VERSION = Pattern.compile("-(\\d+(\\.|$))");
-        static final Pattern TRAILING_VERSION = Pattern.compile("(\\.|\\d)*$");
         static final Pattern NON_ALPHANUM = Pattern.compile("[^A-Za-z0-9]");
         static final Pattern REPEATING_DOTS = Pattern.compile("(\\.)(\\1)+");
         static final Pattern LEADING_DOTS = Pattern.compile("^\\.");
@@ -558,9 +557,6 @@ public class ModulePath implements ModuleFinder {
      * Clean up candidate module name derived from a JAR file name.
      */
     private static String cleanModuleName(String mn) {
-        // drop trailing version from name
-        mn = Patterns.TRAILING_VERSION.matcher(mn).replaceAll("");
-
         // replace non-alphanumeric
         mn = Patterns.NON_ALPHANUM.matcher(mn).replaceAll(".");
 
@@ -609,11 +605,10 @@ public class ModulePath implements ModuleFinder {
                 // no module-info.class so treat it as automatic module
                 try {
                     ModuleDescriptor md = deriveModuleDescriptor(jf);
-                    attrs = new ModuleInfo.Attributes(md, null, null);
-                } catch (IllegalArgumentException e) {
-                    throw new FindException(
-                        "Unable to derive module descriptor for: "
-                        + jf.getName(), e);
+                    attrs = new ModuleInfo.Attributes(md, null, null, null);
+                } catch (RuntimeException e) {
+                    throw new FindException("Unable to derive module descriptor for "
+                                            + jf.getName(), e);
                 }
 
             } else {
@@ -631,7 +626,7 @@ public class ModulePath implements ModuleFinder {
     private Set<String> explodedPackages(Path dir) {
         try {
             return Files.find(dir, Integer.MAX_VALUE,
-                              ((path, attrs) -> attrs.isRegularFile()))
+                    ((path, attrs) -> attrs.isRegularFile() && !isHidden(path)))
                     .map(path -> dir.relativize(path))
                     .map(this::toPackageName)
                     .flatMap(Optional::stream)
@@ -672,18 +667,18 @@ public class ModulePath implements ModuleFinder {
     /**
      * Maps the name of an entry in a JAR or ZIP file to a package name.
      *
-     * @throws IllegalArgumentException if the name is a class file in
-     *         the top-level directory of the JAR/ZIP file (and it's
-     *         not module-info.class)
+     * @throws InvalidModuleDescriptorException if the name is a class file in
+     *         the top-level directory of the JAR/ZIP file (and it's not
+     *         module-info.class)
      */
     private Optional<String> toPackageName(String name) {
         assert !name.endsWith("/");
         int index = name.lastIndexOf("/");
         if (index == -1) {
             if (name.endsWith(".class") && !name.equals(MODULE_INFO)) {
-                throw new IllegalArgumentException(name
-                        + " found in top-level directory"
-                        + " (unnamed package not allowed in module)");
+                String msg = name + " found in top-level directory"
+                             + " (unnamed package not allowed in module)";
+                throw new InvalidModuleDescriptorException(msg);
             }
             return Optional.empty();
         }
@@ -701,8 +696,8 @@ public class ModulePath implements ModuleFinder {
      * Maps the relative path of an entry in an exploded module to a package
      * name.
      *
-     * @throws IllegalArgumentException if the name is a class file in
-     *          the top-level directory (and it's not module-info.class)
+     * @throws InvalidModuleDescriptorException if the name is a class file in
+     *         the top-level directory (and it's not module-info.class)
      */
     private Optional<String> toPackageName(Path file) {
         assert file.getRoot() == null;
@@ -711,9 +706,9 @@ public class ModulePath implements ModuleFinder {
         if (parent == null) {
             String name = file.toString();
             if (name.endsWith(".class") && !name.equals(MODULE_INFO)) {
-                throw new IllegalArgumentException(name
-                        + " found in top-level directory"
-                        + " (unnamed package not allowed in module)");
+                String msg = name + " found in top-level directory"
+                             + " (unnamed package not allowed in module)";
+                throw new InvalidModuleDescriptorException(msg);
             }
             return Optional.empty();
         }
@@ -724,6 +719,17 @@ public class ModulePath implements ModuleFinder {
         } else {
             // not a valid package name
             return Optional.empty();
+        }
+    }
+
+    /**
+     * Returns true if the given file exists and is a hidden file
+     */
+    private boolean isHidden(Path file) {
+        try {
+            return Files.isHidden(file);
+        } catch (IOException ioe) {
+            return false;
         }
     }
 
