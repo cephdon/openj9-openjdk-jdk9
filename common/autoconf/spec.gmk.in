@@ -569,11 +569,8 @@ SJAVAC_SERVER_JAVA=@FIXPATH@ @FIXPATH_DETACH_FLAG@ $(SJAVAC_SERVER_JAVA_CMD) \
 JAVAC_FLAGS?=@JAVAC_FLAGS@
 
 
-BUILD_JAVA_FLAGS := @BOOTCYCLE_JVM_ARGS_BIG@ --patch-module java.base=@FIXPATH@$(BUILD_JDK)/../j9classes/java.base -Djava.lang.invoke.stringConcat=BC_SB
-BUILDJAVA_FLAGS_JAVAC := -J--patch-module -Jjava.base=@FIXPATH@$(BUILD_JDK)/../j9classes/java.base -J-Djava.lang.invoke.stringConcat=BC_SB
+BUILD_JAVA_FLAGS := @BOOTCYCLE_JVM_ARGS_BIG@
 BUILD_JAVA=@FIXPATH@ $(BUILD_JDK)/bin/java $(BUILD_JAVA_FLAGS)
-BUILD_JAVAC=@FIXPATH@ $(BUILD_JDK)/bin/javac $(BUILDJAVA_FLAGS_JAVAC)
-BUILD_JAVAP=@FIXPATH@ $(BUILD_JDK)/bin/javap $(BUILDJAVA_FLAGS_JAVAC)
 
 # Use ?= as this can be overridden from bootcycle-spec.gmk
 BOOT_JDK_MODULAR ?= @BOOT_JDK_MODULAR@
@@ -621,9 +618,6 @@ ifndef RC_FLAGS
   RC_FLAGS:=@RC_FLAGS@
 endif
 
-
-# OpenJ9 build flag
-BUILD_OPENJ9:=@BUILD_OPENJ9@
 
 # Tools adhering to a minimal and common standard of posix compliance.
 AWK:=@AWK@

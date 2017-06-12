@@ -16,3 +16,11 @@ define IncludeCustomExtension
     endif
   endif
 endef
+
+
+
+# OpenJ9 build flag
+BUILD_OPENJ9:=@BUILD_OPENJ9@
+
+# why?
+BUILD_JAVA_FLAGS +=-Djava.lang.invoke.stringConcat=BC_SB
