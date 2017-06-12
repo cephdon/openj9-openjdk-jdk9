@@ -30,6 +30,9 @@ AC_DEFUN_ONCE([CUSTOM_LATE_HOOK],
 
   # Create the custom-spec.gmk
   AC_CONFIG_FILES([$OUTPUT_ROOT/custom-spec.gmk:$CLOSED_AUTOCONF_DIR/custom-spec.gmk.in])
+
+  # explicitly disable classlist generation
+  ENABLE_GENERATE_CLASSLIST="false"
 ])
 
 

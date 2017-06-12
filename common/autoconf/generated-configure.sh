@@ -5174,7 +5174,7 @@ VS_SDK_PLATFORM_NAME_2013=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1497281840
+DATE_WHEN_GENERATED=1497290267
 
 ###############################################################################
 #
@@ -64962,11 +64962,7 @@ fi
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the CDS classlist generation should be enabled" >&5
 $as_echo_n "checking if the CDS classlist generation should be enabled... " >&6; }
-  if test "x$with-j9" != x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    ENABLE_GENERATE_CLASSLIST="false"
-  elif test "x$enable_generate_classlist" = "xyes"; then
+  if test "x$enable_generate_classlist" = "xyes"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes, forced" >&5
 $as_echo "yes, forced" >&6; }
     ENABLE_GENERATE_CLASSLIST="true"
