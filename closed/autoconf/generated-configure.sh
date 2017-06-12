@@ -5185,7 +5185,7 @@ VS_SDK_PLATFORM_NAME_2013=
 
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1497290267
+DATE_WHEN_GENERATED=1497293275
 
 ###############################################################################
 #
@@ -31181,8 +31181,8 @@ $as_echo "yes, will use output dir" >&6; }
     fi
   fi
 
-  JMOD="$BUILD_JDK/bin/jmod -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
-  JLINK="$BUILD_JDK/bin/jlink -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
+  JMOD="$BUILD_JDK/bin/jmod"
+  JLINK="$BUILD_JDK/bin/jlink"
 
 
 
