@@ -524,8 +524,8 @@ AC_DEFUN([BOOTJDK_SETUP_BUILD_JDK],
     fi
   fi
 
-  JMOD="$BUILD_JDK/bin/jmod -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
-  JLINK="$BUILD_JDK/bin/jlink -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
+  JMOD="$BUILD_JDK/bin/jmod"
+  JLINK="$BUILD_JDK/bin/jlink"
   AC_SUBST(JMOD)
   AC_SUBST(JLINK)
 

@@ -848,7 +848,6 @@ VS_PATH
 CYGWIN_LINK
 SYSROOT_LDFLAGS
 SYSROOT_CFLAGS
-BUILD_OPENJ9
 EXTRA_LDFLAGS
 EXTRA_CXXFLAGS
 EXTRA_CFLAGS
@@ -960,6 +959,7 @@ CONF_NAME
 SPEC
 SDKROOT
 XCODEBUILD
+BUILD_OPENJ9
 JVM_VARIANT_MAIN
 VALID_JVM_VARIANTS
 JVM_VARIANTS
@@ -1128,6 +1128,7 @@ enable_debug
 with_debug_level
 with_jvm_variants
 with_cpu_port
+with_j9
 with_devkit
 with_sys_root
 with_sysroot
@@ -1174,7 +1175,6 @@ with_toolchain_type
 with_extra_cflags
 with_extra_cxxflags
 with_extra_ldflags
-with_j9
 with_toolchain_version
 with_build_devkit
 with_jtreg
@@ -2038,6 +2038,7 @@ Optional Packages:
                           [server]
   --with-cpu-port         specify sources to use for Hotspot 64-bit ARM port
                           (arm64,aarch64) [aarch64]
+  --with-j9               Build J9 VM sources
   --with-devkit           use this devkit for compilers, tools and resources
   --with-sys-root         alias for --with-sysroot for backwards compatability
   --with-sysroot          use this directory as sysroot
@@ -2114,7 +2115,6 @@ Optional Packages:
   --with-extra-cflags     extra flags to be used when compiling jdk c-files
   --with-extra-cxxflags   extra flags to be used when compiling jdk c++-files
   --with-extra-ldflags    extra flags to be used when linking jdk
-  --with-j9               Build J9 VM sources
   --with-toolchain-version
                           the version of the toolchain to look for, use
                           '--help' to show possible values [platform
@@ -5180,8 +5180,12 @@ VS_SDK_PLATFORM_NAME_2013=
 
 
 
+
+
+
+
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1496868424
+DATE_WHEN_GENERATED=1497293275
 
 ###############################################################################
 #
@@ -17037,6 +17041,31 @@ $as_echo "$as_me: Unknown variant(s) specified: $INVALID_VARIANTS" >&6;}
 
 
 # With basic setup done, call the custom early hook.
+
+  # Check whether --with-j9 was given.
+  BUILD_OPENJ9=false
+
+# Check whether --with-j9 was given.
+if test "${with_j9+set}" = set; then :
+  withval=$with_j9;
+fi
+
+  if test "x$with-j9" != x; then
+  	if ! (test -d $SRC_ROOT/j9vm); then
+  	  as_fn_error $? "\"Cannot locate the path to OpenJ9 sources!\"" "$LINENO" 5
+ 	fi
+  	BUILD_OPENJ9=true
+  fi
+
+
+
+  if test "x$with-j9" != x; then
+    JAVA_BASE_LDFLAGS="${JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
+  fi
+
+  if test "x$with-j9" != x; then
+    OPENJDK_BUILD_JAVA_BASE_LDFLAGS="${OPENJDK_BUILD_JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
+  fi
 
 
 # Check if we have devkits, extra paths or sysroot set.
@@ -31152,8 +31181,8 @@ $as_echo "yes, will use output dir" >&6; }
     fi
   fi
 
-  JMOD="$BUILD_JDK/bin/jmod -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
-  JLINK="$BUILD_JDK/bin/jlink -J--patch-module -Jjava.base=$BUILD_JDK/../j9classes/java.base"
+  JMOD="$BUILD_JDK/bin/jmod"
+  JLINK="$BUILD_JDK/bin/jlink"
 
 
 
@@ -31729,23 +31758,6 @@ fi
   CXXFLAGS="$EXTRA_CXXFLAGS"
   LDFLAGS="$EXTRA_LDFLAGS"
   CPPFLAGS=""
-
-  # Check whether --with-j9 was given.
-  BUILD_OPENJ9=false
-
-# Check whether --with-j9 was given.
-if test "${with_j9+set}" = set; then :
-  withval=$with_j9;
-fi
-
-  if test "x$with-j9" != x; then
-     if ! (test -d $SRC_ROOT/j9vm); then
-       as_fn_error $? "\"Cannot locate the path to OpenJ9 sources!\"" "$LINENO" 5
-     fi
-     BUILD_OPENJ9=true
-  fi
-
-
 
 # The sysroot cflags are needed for configure to be able to run the compilers
 
@@ -50989,10 +51001,6 @@ $as_echo "$as_me: GCC >= 6 detected; adding ${NO_DELETE_NULL_POINTER_CHECKS_CFLA
     JAVA_BASE_LDFLAGS="${JAVA_BASE_LDFLAGS} \
         -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base"
 
-    if test "x$with-j9" != x; then
-      JAVA_BASE_LDFLAGS="${JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
-    fi
-
     if test "xTARGET" = "xTARGET"; then
       # On some platforms (mac) the linker warns about non existing -L dirs.
       # For any of the variants server, client or minimal, the dir matches the
@@ -51810,10 +51818,6 @@ $as_echo "$as_me: GCC >= 6 detected; adding ${NO_DELETE_NULL_POINTER_CHECKS_CFLA
   else
     OPENJDK_BUILD_JAVA_BASE_LDFLAGS="${OPENJDK_BUILD_JAVA_BASE_LDFLAGS} \
         -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base"
-
-    if test "x$with-j9" != x; then
-      OPENJDK_BUILD_JAVA_BASE_LDFLAGS="${OPENJDK_BUILD_JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
-    fi
 
     if test "xBUILD" = "xTARGET"; then
       # On some platforms (mac) the linker warns about non existing -L dirs.
@@ -64994,11 +64998,7 @@ fi
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the CDS classlist generation should be enabled" >&5
 $as_echo_n "checking if the CDS classlist generation should be enabled... " >&6; }
-  if test "x$with-j9" != x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    ENABLE_GENERATE_CLASSLIST="false"
-  elif test "x$enable_generate_classlist" = "xyes"; then
+  if test "x$enable_generate_classlist" = "xyes"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes, forced" >&5
 $as_echo "yes, forced" >&6; }
     ENABLE_GENERATE_CLASSLIST="true"
@@ -66746,11 +66746,14 @@ $as_echo "$OUTPUT_DIR_IS_LOCAL" >&6; }
 
 # At the end, call the custom hook. (Dummy macro if no custom sources available)
 
-    CLOSED_AUTOCONF_DIR="$SRC_ROOT/closed/autoconf"
+  CLOSED_AUTOCONF_DIR="$SRC_ROOT/closed/autoconf"
 
-    # Create the custom-spec.gmk
-    ac_config_files="$ac_config_files $OUTPUT_ROOT/custom-spec.gmk:$CLOSED_AUTOCONF_DIR/custom-spec.gmk.in"
+  # Create the custom-spec.gmk
+  ac_config_files="$ac_config_files $OUTPUT_ROOT/custom-spec.gmk:$CLOSED_AUTOCONF_DIR/custom-spec.gmk.in"
 
+
+  # explicitly disable classlist generation
+  ENABLE_GENERATE_CLASSLIST="false"
 
 
 # This needs to be done after CUSTOM_LATE_HOOK since we can setup custom features.
