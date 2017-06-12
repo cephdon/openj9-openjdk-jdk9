@@ -848,7 +848,6 @@ VS_PATH
 CYGWIN_LINK
 SYSROOT_LDFLAGS
 SYSROOT_CFLAGS
-BUILD_OPENJ9
 EXTRA_LDFLAGS
 EXTRA_CXXFLAGS
 EXTRA_CFLAGS
@@ -1174,7 +1173,6 @@ with_toolchain_type
 with_extra_cflags
 with_extra_cxxflags
 with_extra_ldflags
-with_j9
 with_toolchain_version
 with_build_devkit
 with_jtreg
@@ -2114,7 +2112,6 @@ Optional Packages:
   --with-extra-cflags     extra flags to be used when compiling jdk c-files
   --with-extra-cxxflags   extra flags to be used when compiling jdk c++-files
   --with-extra-ldflags    extra flags to be used when linking jdk
-  --with-j9               Build J9 VM sources
   --with-toolchain-version
                           the version of the toolchain to look for, use
                           '--help' to show possible values [platform
@@ -5177,7 +5174,7 @@ VS_SDK_PLATFORM_NAME_2013=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1496868424
+DATE_WHEN_GENERATED=1497281840
 
 ###############################################################################
 #
@@ -31726,23 +31723,6 @@ fi
   LDFLAGS="$EXTRA_LDFLAGS"
   CPPFLAGS=""
 
-  # Check whether --with-j9 was given.
-  BUILD_OPENJ9=false
-
-# Check whether --with-j9 was given.
-if test "${with_j9+set}" = set; then :
-  withval=$with_j9;
-fi
-
-  if test "x$with-j9" != x; then
-     if ! (test -d $SRC_ROOT/j9vm); then
-       as_fn_error $? "\"Cannot locate the path to OpenJ9 sources!\"" "$LINENO" 5
-     fi
-     BUILD_OPENJ9=true
-  fi
-
-
-
 # The sysroot cflags are needed for configure to be able to run the compilers
 
   if test "x$SYSROOT" != "x"; then
@@ -50985,10 +50965,6 @@ $as_echo "$as_me: GCC >= 6 detected; adding ${NO_DELETE_NULL_POINTER_CHECKS_CFLA
     JAVA_BASE_LDFLAGS="${JAVA_BASE_LDFLAGS} \
         -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base"
 
-    if test "x$with-j9" != x; then
-      JAVA_BASE_LDFLAGS="${JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
-    fi
-
     if test "xTARGET" = "xTARGET"; then
       # On some platforms (mac) the linker warns about non existing -L dirs.
       # For any of the variants server, client or minimal, the dir matches the
@@ -51806,10 +51782,6 @@ $as_echo "$as_me: GCC >= 6 detected; adding ${NO_DELETE_NULL_POINTER_CHECKS_CFLA
   else
     OPENJDK_BUILD_JAVA_BASE_LDFLAGS="${OPENJDK_BUILD_JAVA_BASE_LDFLAGS} \
         -L\$(SUPPORT_OUTPUTDIR)/modules_libs/java.base"
-
-    if test "x$with-j9" != x; then
-      OPENJDK_BUILD_JAVA_BASE_LDFLAGS="${OPENJDK_BUILD_JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
-    fi
 
     if test "xBUILD" = "xTARGET"; then
       # On some platforms (mac) the linker warns about non existing -L dirs.
