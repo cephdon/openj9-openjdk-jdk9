@@ -33,7 +33,6 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import sun.management.VMManagement;
 
 /**
  * JdpController is responsible to create and manage a broadcast loop.
@@ -134,16 +133,8 @@ public final class JdpController {
     // Get the process id of the current running Java process
     private static Integer getProcessId() {
         try {
-            // Get the current process id using a reflection hack
-            RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
-            Field jvm = runtime.getClass().getDeclaredField("jvm");
-            jvm.setAccessible(true);
-
-            VMManagement mgmt = (sun.management.VMManagement) jvm.get(runtime);
-            Method pid_method = mgmt.getClass().getDeclaredMethod("getProcessId");
-            pid_method.setAccessible(true);
-            Integer pid = (Integer) pid_method.invoke(mgmt);
-            return pid;
+            // Get the current process id
+            return (int)ProcessHandle.current().getPid();
         } catch(Exception ex) {
             return null;
         }
