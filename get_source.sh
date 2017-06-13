@@ -59,19 +59,19 @@ usage() {
 	echo "  -j9vm-repo        the OpenJ9/vm repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/j9vm.git"
 	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/j9vm.git"
 	echo "  -j9vm-branch      the OpenJ9/vm git branch: master"
-	echo "  -j9vmSHA          a commit SHA for the j9vm repository"
+	echo "  -j9vm-sha          a commit SHA for the j9vm repository"
 	echo "  -omr-repo         the OpenJ9/omr repository url: git002@gitlab-polyglot.hursley.ibm.com:omr/omr.git"
 	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/omr.git"
 	echo "  -omr-branch       the OpenJ9/omr git branch: java-master"
-	echo "  -omrSHA           a commit SHA for the omr repository"
+	echo "  -omr-sha           a commit SHA for the omr repository"
 	echo "  -binaries-repo    the OpenJ9/binaries repository url: git002@gitlab-polyglot.hursley.ibm.com:j9/binaries.git"
 	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/binaries.git"
 	echo "  -binaries-branch  the OpenJ9/binaries git branch: master"
-	echo "  -binariesSHA      a commit SHA for the binaries repository"
+	echo "  -binaries-sha      a commit SHA for the binaries repository"
 	echo "  -jit-repo         the OpenJ9/jit repository url: git002@gitlab-polyglot.hursley.ibm.com:jit/tr.open.git"
 	echo "                    or <user>@gitlab-polyglot.hursley.ibm.com:<namespace>/tr.open.git "
 	echo "  -jit-branch       the OpenJ9/jit git branch: java-master"
-	echo "  -jitSHA           a commit SHA for the tr.open repository"
+	echo "  -jit-sha           a commit SHA for the tr.open repository"
 	echo "  -parallel         (boolean) if 'true' then the clone j9 repository commands run in parallel, default is false"
 	echo " "
 	exit 1
@@ -94,7 +94,7 @@ for i in "$@" ; do
 			j9options="${j9options} ${i}"
 			;;
 
-		-j9vmSHA=* | -omrSHA=* | -binariesSHA=* | -jitSHA=* )
+		-j9vm-sha=* | -omr-sha=* | -binaries-sha=* | -jit-sha=* )
 			j9options="${j9options} ${i}"
 			;;
 
