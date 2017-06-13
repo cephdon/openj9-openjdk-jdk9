@@ -1,0 +1,10 @@
+
+BOOT_MODULES += \
+    com.ibm.management \
+    #
+
+TOP_SRC_DIRS += \
+    $(SUPPORT_OUTPUTDIR)/j9jcl_sources \
+    $(JDK_TOPDIR)/../openj9/glue/src \
+    #
+

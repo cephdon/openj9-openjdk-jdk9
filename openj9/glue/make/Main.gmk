@@ -1,3 +1,21 @@
 # (c) Copyright IBM Corp. 2017 All Rights Reserved
 
 CLEAN_DIRS += vm
+
+###############################################################################
+# OpenJ9 target compile j9 classes
+
+ifeq ($(BUILD_OPENJ9), true)
+# Generate J9JCL source
+include $(SRC_ROOT)/openj9/OpenJ9.mk
+
+j9vm-compose:
+	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) compose)
+
+j9vm-compose-buildjvm: j9vm-build $(J9JCL_GENSRC_MAKEFILE)
+	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) compose-buildjvm)
+
+j9vm-build:
+	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) build-j9)
+endif
+

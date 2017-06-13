@@ -208,10 +208,27 @@ compile-j9 : run-preprocessors-j9
 	@$(CP) -p $(OUTPUT_ROOT)/vm/libjsig.so $(OUTPUT_ROOT)/support/modules_libs/java.base/
 	$(info Creating support/modules_libs/java.base/libjsig.so from J9 sources)
 
-# comments for generate-j9jcl-sources
-# currently generates all j9jcl source for every module each time its run.  PR 125757.
-# currently only works for java.base
-generate-j9jcl-sources :
+# Convert J9 JCL module so in correct structure to be picked up by JDK make
+define openj9_convert_j9jcl_src_to_openjdk_format
+  $(info Converting J9JCL module to JDK structure: $1)
+  $(RM) -rf $(SUPPORT_OUTPUTDIR)/j9jcl_sources/$1/share
+  if $(FIND) $(SUPPORT_OUTPUTDIR)/j9jcl_sources/$1 -maxdepth 1 -mindepth 1 2>/dev/null | grep -q .; \
+  then \
+    $(MKDIR) -p $(SUPPORT_OUTPUTDIR)/j9jcl_sources/$1/share/classes && \
+    $(FIND) $(SUPPORT_OUTPUTDIR)/j9jcl_sources/$1 -maxdepth 1 -mindepth 1 | grep -v $(SUPPORT_OUTPUTDIR)/j9jcl_sources/$1/share | xargs -i cp -a {} $(SUPPORT_OUTPUTDIR)/j9jcl_sources/$1/share/classes; \
+  else \
+    echo "J9 JCL Module $1 has no files"; \
+  fi;
+endef
+
+J9JCL_GENSRC_MAKEFILE := $(MAKESUPPORT_OUTPUTDIR)/j9jcl_gensrc.gmk
+MERGE_TOOL := $(OUTPUT_ROOT)/vm/buildtools/com/ibm/moduletools/ModuleInfoMerger.class
+
+recur_wildcard=$(foreach dir,$(wildcard $1*),$(call recur_wildcard,$(dir)/,$2) $(filter $(subst *,%,$2),$(dir)))
+AllJclSource = $(call recur_wildcard,$(OPENJ9VM_SRC_DIR)/jcl/src/,*.java)
+
+# generate-j9jcl-sources
+$(J9JCL_GENSRC_MAKEFILE) : $(AllJclSource)
 	$(info Generating J9JCL sources)
 	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/j9jcl_sources
 	@$(BOOT_JDK)/bin/java \
@@ -226,10 +243,14 @@ generate-j9jcl-sources :
 			-dest $(SUPPORT_OUTPUTDIR)/j9jcl_sources \
 			-macro:define "com.ibm.oti.vm.library.version=29" \
 			-tag:define "PLATFORM-$(J9_PLATFORM_CODE)"
-	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
-	@$(CP) -rp $(SUPPORT_OUTPUTDIR)/j9jcl_sources/java.base/* $(SUPPORT_OUTPUTDIR)/gensrc/java.base/
-	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/gensrc/jdk.attach/
-	@$(CP) -rp $(SUPPORT_OUTPUTDIR)/j9jcl_sources/jdk.attach/* $(SUPPORT_OUTPUTDIR)/gensrc/jdk.attach/
+	$(foreach module,\
+		$(notdir $(wildcard $(OPENJ9VM_SRC_DIR)/jcl/src/*)),\
+		$(call openj9_convert_j9jcl_src_to_openjdk_format,$(module)))
+	$(MKDIR) -p $(@D)
+	echo "# J9JCL gensrc completed marker makefile" > $(J9JCL_GENSRC_MAKEFILE)
+
+# Force J9JCL generation
+-include $(J9JCL_GENSRC_MAKEFILE)		
 
 # used to build the BUILD_JVM which is used to compile jmods and module.
 compose-buildjvm :

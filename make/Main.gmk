@@ -238,24 +238,6 @@ $(eval $(call DeclareRecipesForPhase, LAUNCHER, \
 
 ALL_TARGETS += $(LAUNCHER_TARGETS)
 
-###############################################################################
-# OpenJ9 target compile j9 classes
-
-ifeq ($(BUILD_OPENJ9), true)
-j9vm-compose:
-	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) compose)
-
-j9vm-compose-buildjvm: j9vm-build generate-j9jcl
-	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) compose-buildjvm)
-
-generate-j9jcl:
-	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) generate-j9jcl-sources)
-
-j9vm-build:
-	+($(CD) $(SRC_ROOT)/openj9 && $(MAKE) -f OpenJ9.mk SPEC=$(SPEC) build-j9)
-endif
-
-
 ################################################################################
 # Build hotspot target
 
@@ -311,7 +293,7 @@ ALL_TARGETS += generate-summary
 ################################################################################
 # Jmod targets
 
-JMOD_MODULES := $(ALL_MODULES) #com.ibm.management
+JMOD_MODULES := $(ALL_MODULES)
 JMOD_TARGETS := $(addsuffix -jmod, $(JMOD_MODULES))
 
 define DeclareJmodRecipe
@@ -904,7 +886,7 @@ $(foreach m, $(LAUNCHER_MODULES), $(eval $m: $m-launchers))
 $(foreach m, $(ALL_COPY_MODULES), $(eval $m: $m-copy))
 
 # Building java.base includes building all of hotspot.
-java.base: generate-j9jcl j9vm-build
+java.base: j9vm-build
 
 demos: demos-jdk
 
