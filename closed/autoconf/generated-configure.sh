@@ -959,6 +959,12 @@ CONF_NAME
 SPEC
 SDKROOT
 XCODEBUILD
+OPENJ9_PLATFORM
+OPENJ9_PLATFORM_CODE
+OPENJ9VM_TOPDIR
+OPENJ9OMR_TOPDIR
+OPENJ9JIT_TOPDIR
+OPENJ9BINARIES_TOPDIR
 BUILD_OPENJ9
 JVM_VARIANT_MAIN
 VALID_JVM_VARIANTS
@@ -5184,8 +5190,12 @@ VS_SDK_PLATFORM_NAME_2013=
 
 
 
+
+
+
+
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1497293275
+DATE_WHEN_GENERATED=1497891205
 
 ###############################################################################
 #
@@ -17042,6 +17052,40 @@ $as_echo "$as_me: Unknown variant(s) specified: $INVALID_VARIANTS" >&6;}
 
 # With basic setup done, call the custom early hook.
 
+
+  # Convert openjdk cpu names to openj9 names
+  case "$build_cpu" in
+    x86_64)
+      OPENJ9_CPU=x86-64
+      ;;
+    powerpc64le)
+      OPENJ9_CPU=ppc-64_le
+      ;;
+    s390x)
+      OPENJ9_CPU=s390-64
+      ;;
+    *)
+      as_fn_error $? "unsupported OpenJ9 cpu $build_cpu" "$LINENO" 5
+      ;;
+  esac
+
+  OPENJ9_PLATFORM="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_cmprssptrs"
+
+  if test "x$OPENJ9_CPU" = xx86-64; then
+    OPENJ9_PLATFORM_CODE=xa64
+  elif test "x$OPENJ9_CPU" = xppc-64_le; then
+    OPENJ9_PLATFORM_CODE=xl64
+    OPENJ9_PLATFORM="${OPENJDK_BUILD_OS}_ppc-64_cmprssptrs_le_gcc"
+  elif test "x$OPENJ9_CPU" = xs390-64; then
+    OPENJ9_PLATFORM_CODE=xz64
+  else
+    as_fn_error $? "Unsupported OpenJ9 cpu ${OPENJ9_CPU}, contact support team!" "$LINENO" 5
+  fi
+
+
+
+
+
   # Check whether --with-j9 was given.
   BUILD_OPENJ9=false
 
@@ -17066,6 +17110,18 @@ fi
   if test "x$with-j9" != x; then
     OPENJDK_BUILD_JAVA_BASE_LDFLAGS="${OPENJDK_BUILD_JAVA_BASE_LDFLAGS} -L\$(SUPPORT_OUTPUTDIR)/../vm"
   fi
+
+  # Where are the OpenJ9 sources.
+  OPENJ9BINARIES_TOPDIR="$SRC_ROOT/binaries"
+  OPENJ9JIT_TOPDIR="$SRC_ROOT/tr.open"
+  OPENJ9OMR_TOPDIR="$SRC_ROOT/omr"
+  OPENJ9VM_TOPDIR="$SRC_ROOT/j9vm"
+
+
+
+
+
+
 
 
 # Check if we have devkits, extra paths or sysroot set.

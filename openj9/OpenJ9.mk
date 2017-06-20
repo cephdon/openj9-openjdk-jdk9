@@ -4,29 +4,9 @@ ifeq ($(wildcard $(SPEC)),)
 endif
 include $(SPEC)
 
-# J9_PLATFORM should be defined in the spec.gmk via configure (Issue 58)
-ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-x64)
-  export J9_PLATFORM=linux_x86-64_cmprssptrs
-  export J9_PLATFORM_CODE=xa64
-else ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-ppc64le)
-  export J9_PLATFORM=linux_ppc-64_cmprssptrs_le_gcc
-  export J9_PLATFORM_CODE=xl64
-else ifeq ($(OPENJDK_TARGET_BUNDLE_PLATFORM),linux-s390x)
-  export J9_PLATFORM=linux_390-64_cmprssptrs
-  export J9_PLATFORM_CODE=xz64
-else
-  $(error "Unsupported platform, contact support team: $(OPENJDK_TARGET_BUNDLE_PLATFORM)")
-endif
-
-# repo variables should be defined in the spec.gmk via configure
-OPENJ9BINARIES_DIR := $(SRC_ROOT)/binaries
-OPENJ9JIT_SRC_DIR  := $(SRC_ROOT)/tr.open
-OPENJ9OMR_SRC_DIR  := $(SRC_ROOT)/omr
-OPENJ9VM_SRC_DIR   := $(SRC_ROOT)/j9vm
-
-OPENJ9JIT_SHA      := $(shell git -C $(OPENJ9JIT_SRC_DIR) rev-parse --short HEAD)
-OPENJ9OMR_SHA      := $(shell git -C $(OPENJ9OMR_SRC_DIR) rev-parse --short HEAD)
-OPENJ9VM_SHA       := $(shell git -C $(OPENJ9VM_SRC_DIR)  rev-parse --short HEAD)
+OPENJ9JIT_SHA      := $(shell git -C $(OPENJ9JIT_TOPDIR) rev-parse --short HEAD)
+OPENJ9OMR_SHA      := $(shell git -C $(OPENJ9OMR_TOPDIR) rev-parse --short HEAD)
+OPENJ9VM_SHA       := $(shell git -C $(OPENJ9VM_TOPDIR)  rev-parse --short HEAD)
 ifeq (,$(OPENJ9JIT_SHA))
   $(error Could not determine tr.open SHA)
 endif
@@ -96,11 +76,11 @@ OPENJ9_SOURCETOOLS_JARS := \
 OPENJ9_STAGED_SOURCETOOLS := \
   $(addprefix $(OUTPUT_ROOT)/vm/sourcetools/lib/,$(OPENJ9_SOURCETOOLS_JARS))
 
-$(foreach jar,$(OPENJ9_BINARIES_JARS),$(eval $(call openj9_copy_file,$(OUTPUT_ROOT)/vm/buildtools/$(notdir $(jar)),$(OPENJ9BINARIES_DIR)/$(jar))))
+$(foreach jar,$(OPENJ9_BINARIES_JARS),$(eval $(call openj9_copy_file,$(OUTPUT_ROOT)/vm/buildtools/$(notdir $(jar)),$(OPENJ9BINARIES_TOPDIR)/$(jar))))
 
-$(foreach jar,$(OPENJ9_SOURCETOOLS_JARS),$(eval $(call openj9_copy_file,$(OUTPUT_ROOT)/vm/sourcetools/lib/$(jar),$(OPENJ9BINARIES_DIR)/common/third/$(jar))))
+$(foreach jar,$(OPENJ9_SOURCETOOLS_JARS),$(eval $(call openj9_copy_file,$(OUTPUT_ROOT)/vm/sourcetools/lib/$(jar),$(OPENJ9BINARIES_TOPDIR)/common/third/$(jar))))
 
-$(eval $(call openj9_copy_file,$(OUTPUT_ROOT)/vm/buildtools/extract_structures/linux_x86/extract_structures,$(OPENJ9BINARIES_DIR)/vm/ibm/extract_structures))
+$(eval $(call openj9_copy_file,$(OUTPUT_ROOT)/vm/buildtools/extract_structures/linux_x86/extract_structures,$(OPENJ9BINARIES_TOPDIR)/vm/ibm/extract_structures))
 
 # Comments for stage-j9
 # Currently there is a staged location where j9 is built.  This is due to a number of reasons:
@@ -115,7 +95,7 @@ ifeq (yes,$(ENABLE_DDR))
 
 stage-j9-buildspecs :
 	$(info Staging OpenJ9 buildspecs in $(OUTPUT_ROOT)/vm)
-	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/buildspecs,$(OPENJ9VM_SRC_DIR)/buildspecs)
+	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/buildspecs,$(OPENJ9VM_TOPDIR)/buildspecs)
 
 OPENJ9_STAGED_BUILDSPECS := stage-j9-buildspecs
 
@@ -133,13 +113,13 @@ $1 : $2
 	@$(SED) -e '/module_ddr/s/true/false/g' < $$< > $$@
 endef
 
-BUILDSPEC_ALL_FILES   := $(notdir $(wildcard $(OPENJ9VM_SRC_DIR)/buildspecs/*))
+BUILDSPEC_ALL_FILES   := $(notdir $(wildcard $(OPENJ9VM_TOPDIR)/buildspecs/*))
 BUILDSPEC_SPEC_FILES  := $(filter     %.spec,$(BUILDSPEC_ALL_FILES))
 BUILDSPEC_OTHER_FILES := $(filter-out %.spec,$(BUILDSPEC_ALL_FILES))
 
-$(foreach file,$(BUILDSPEC_SPEC_FILES),$(eval $(call openj9_copy_spec,$(OUTPUT_ROOT)/vm/buildspecs/$(file),$(OPENJ9VM_SRC_DIR)/buildspecs/$(file))))
+$(foreach file,$(BUILDSPEC_SPEC_FILES),$(eval $(call openj9_copy_spec,$(OUTPUT_ROOT)/vm/buildspecs/$(file),$(OPENJ9VM_TOPDIR)/buildspecs/$(file))))
 
-$(foreach file,$(BUILDSPEC_OTHER_FILES),$(eval $(call openj9_copy_file,$(OUTPUT_ROOT)/vm/buildspecs/$(file),$(OPENJ9VM_SRC_DIR)/buildspecs/$(file))))
+$(foreach file,$(BUILDSPEC_OTHER_FILES),$(eval $(call openj9_copy_file,$(OUTPUT_ROOT)/vm/buildspecs/$(file),$(OPENJ9VM_TOPDIR)/buildspecs/$(file))))
 
 OPENJ9_STAGED_BUILDSPECS := \
   $(addprefix $(OUTPUT_ROOT)/vm/buildspecs/,$(BUILDSPEC_ALL_FILES))
@@ -151,26 +131,26 @@ stage-j9 : \
 		$(OPENJ9_STAGED_BUILDSPECS) \
 		$(OPENJ9_STAGED_SOURCETOOLS)
 	$(info Staging OpenJ9 debugtools in $(OUTPUT_ROOT)/vm)
-	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/debugtools,$(OPENJ9VM_SRC_DIR)/debugtools)
+	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/debugtools,$(OPENJ9VM_TOPDIR)/debugtools)
 
 	$(info Staging OpenJ9 jcl in $(OUTPUT_ROOT)/vm)
-	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/jcl,$(OPENJ9VM_SRC_DIR)/jcl)
+	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/jcl,$(OPENJ9VM_TOPDIR)/jcl)
 
 	$(info Staging OpenJ9 sourcetools in $(OUTPUT_ROOT)/vm)
-	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/sourcetools,$(OPENJ9VM_SRC_DIR)/sourcetools)
+	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/sourcetools,$(OPENJ9VM_TOPDIR)/sourcetools)
 
 	$(info Staging OpenJ9 runtime in $(OUTPUT_ROOT)/vm)
-	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm,$(OPENJ9VM_SRC_DIR)/runtime)
+	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm,$(OPENJ9VM_TOPDIR)/runtime)
 
 	$(info Staging OpenJ9 JIT in $(OUTPUT_ROOT)/vm)
-	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/tr.source,$(OPENJ9JIT_SRC_DIR))
+	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/tr.source,$(OPENJ9JIT_TOPDIR))
 
 	$(info Staging OpenJ9 OMR in $(OUTPUT_ROOT)/vm)
-	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/omr,$(OPENJ9OMR_SRC_DIR))
+	$(call openj9_copy_tree,$(OUTPUT_ROOT)/vm/omr,$(OPENJ9OMR_TOPDIR))
 
 run-preprocessors-j9 : stage-j9
 	$(info Running OpenJ9 preprocessors)
-	$(info J9_PLATFORM set to $(J9_PLATFORM))
+	$(info OPENJ9_PLATFORM set to $(OPENJ9_PLATFORM))
 	# Capture JIT and OMR SHAs to be used in version strings;
 	# possibly something that configure can do?
 	# This needs to be done before uma runs.
@@ -187,7 +167,7 @@ run-preprocessors-j9 : stage-j9
 			J9VM_SHA=$(OPENJ9VM_SHA) \
 			JAVA_HOME=$(BOOT_JDK) \
 			OMR_DIR=$(OUTPUT_ROOT)/vm/omr \
-			SPEC=$(J9_PLATFORM) \
+			SPEC=$(OPENJ9_PLATFORM) \
 			UMA_OPTIONS_EXTRA="-buildDate $(shell date +'%Y%m%d')" \
 			tools \
 	)
@@ -225,26 +205,26 @@ J9JCL_GENSRC_MAKEFILE := $(MAKESUPPORT_OUTPUTDIR)/j9jcl_gensrc.gmk
 MERGE_TOOL := $(OUTPUT_ROOT)/vm/buildtools/com/ibm/moduletools/ModuleInfoMerger.class
 
 recur_wildcard=$(foreach dir,$(wildcard $1*),$(call recur_wildcard,$(dir)/,$2) $(filter $(subst *,%,$2),$(dir)))
-AllJclSource = $(call recur_wildcard,$(OPENJ9VM_SRC_DIR)/jcl/src/,*.java)
+AllJclSource = $(call recur_wildcard,$(OPENJ9VM_TOPDIR)/jcl/src/,*.java)
 
 # generate-j9jcl-sources
 $(J9JCL_GENSRC_MAKEFILE) : $(AllJclSource)
 	$(info Generating J9JCL sources)
 	@$(MKDIR) -p $(SUPPORT_OUTPUTDIR)/j9jcl_sources
 	@$(BOOT_JDK)/bin/java \
-		-cp $(OPENJ9BINARIES_DIR)/vm/ibm/jpp.jar \
+		-cp $(OPENJ9BINARIES_TOPDIR)/vm/ibm/jpp.jar \
 		-Dfile.encoding=US-ASCII \
 		com.ibm.jpp.commandline.CommandlineBuilder \
 			-verdict \
-			-baseDir $(OPENJ9VM_SRC_DIR)/ \
+			-baseDir $(OPENJ9VM_TOPDIR)/ \
 			-config SIDECAR19-SE-B165 \
 			-srcRoot jcl/ \
 			-xml jpp_configuration.xml \
 			-dest $(SUPPORT_OUTPUTDIR)/j9jcl_sources \
 			-macro:define "com.ibm.oti.vm.library.version=29" \
-			-tag:define "PLATFORM-$(J9_PLATFORM_CODE)"
+			-tag:define "PLATFORM-$(OPENJ9_PLATFORM_CODE)"
 	$(foreach module,\
-		$(notdir $(wildcard $(OPENJ9VM_SRC_DIR)/jcl/src/*)),\
+		$(notdir $(wildcard $(OPENJ9VM_TOPDIR)/jcl/src/*)),\
 		$(call openj9_convert_j9jcl_src_to_openjdk_format,$(module)))
 	$(MKDIR) -p $(@D)
 	echo "# J9JCL gensrc completed marker makefile" > $(J9JCL_GENSRC_MAKEFILE)
